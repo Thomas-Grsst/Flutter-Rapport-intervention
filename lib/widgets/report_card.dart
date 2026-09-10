@@ -1,10 +1,9 @@
-import 'dart:io';
-
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 
 import '../models/report.dart';
 import '../theme.dart';
+import 'media_image.dart';
 import 'status_chip.dart';
 
 /// Ligne de la liste des rapports : vignette, client, type d'intervention,
@@ -120,23 +119,23 @@ class ReportCard extends StatelessWidget {
 
   Widget _thumbnail() {
     final photo = report.photos.isNotEmpty ? report.photos.first : null;
-    final file = photo == null ? null : File(photo.filePath);
 
     return ClipRRect(
       borderRadius: BorderRadius.circular(10),
       child: SizedBox(
         width: 66,
         height: 66,
-        child: file != null && file.existsSync()
-            ? Image.file(file, fit: BoxFit.cover)
-            : Container(
-                color: AppColors.paleBlue,
-                child: const Icon(
-                  Icons.description_outlined,
-                  color: AppColors.brandLight,
-                  size: 28,
-                ),
-              ),
+        child: MediaImage(
+          path: photo?.filePath,
+          placeholder: Container(
+            color: AppColors.paleBlue,
+            child: const Icon(
+              Icons.description_outlined,
+              color: AppColors.brandLight,
+              size: 28,
+            ),
+          ),
+        ),
       ),
     );
   }

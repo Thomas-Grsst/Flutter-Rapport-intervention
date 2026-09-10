@@ -74,6 +74,23 @@ class _SiteStepState extends State<SiteStep> {
     }
   }
 
+  /// Largeur réservée à la croix qui retire la date de fin. La même valeur
+  /// sert de gouttière sous la date de début, pour que les deux boutons
+  /// s'alignent exactement.
+  static const double _clearButtonWidth = 44;
+
+  Widget _dateButton({
+    required VoidCallback onPressed,
+    required IconData icon,
+    required String label,
+  }) {
+    return OutlinedButton.icon(
+      onPressed: onPressed,
+      icon: Icon(icon),
+      label: Text(label, style: const TextStyle(fontSize: 16)),
+    );
+  }
+
   Future<void> _pickEndDate() async {
     final start = _draft.interventionDate;
     final picked = await showDatePicker(
@@ -270,15 +287,23 @@ class _SiteStepState extends State<SiteStep> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              OutlinedButton.icon(
-                onPressed: _pickDate,
-                icon: const Icon(Icons.event_outlined),
-                label: Text(
-                  _draft.isMultiDay
-                      ? 'Du ${_dateFormat.format(_draft.interventionDate)}'
-                      : 'Le ${_dateFormat.format(_draft.interventionDate)}',
-                  style: const TextStyle(fontSize: 16),
-                ),
+              // Les deux dates s'empilent sur la même largeur, avec la même
+              // gouttière à droite que la croix occupe sur la ligne du bas :
+              // sinon la date de début, plus courte, flottait de travers.
+              Row(
+                children: [
+                  Expanded(
+                    child: _dateButton(
+                      onPressed: _pickDate,
+                      icon: Icons.event_outlined,
+                      label: _draft.isMultiDay
+                          ? 'Du ${_dateFormat.format(_draft.interventionDate)}'
+                          : 'Le ${_dateFormat.format(_draft.interventionDate)}',
+                    ),
+                  ),
+                  if (_draft.interventionEndDate != null)
+                    const SizedBox(width: _clearButtonWidth),
+                ],
               ),
               if (_draft.interventionEndDate == null)
                 TextButton.icon(
@@ -288,24 +313,25 @@ class _SiteStepState extends State<SiteStep> {
                 )
               else
                 Padding(
-                  padding: const EdgeInsets.only(top: 8),
+                  padding: const EdgeInsets.only(top: 10),
                   child: Row(
                     children: [
                       Expanded(
-                        child: OutlinedButton.icon(
+                        child: _dateButton(
                           onPressed: _pickEndDate,
-                          icon: const Icon(Icons.event_available_outlined),
-                          label: Text(
-                            'Au ${_dateFormat.format(_draft.interventionEndDate!)}',
-                            style: const TextStyle(fontSize: 16),
-                          ),
+                          icon: Icons.event_available_outlined,
+                          label:
+                              'Au ${_dateFormat.format(_draft.interventionEndDate!)}',
                         ),
                       ),
-                      IconButton(
-                        tooltip: 'Retirer la date de fin',
-                        icon: const Icon(Icons.close, size: 20),
-                        onPressed: () =>
-                            _update(() => _draft.interventionEndDate = null),
+                      SizedBox(
+                        width: _clearButtonWidth,
+                        child: IconButton(
+                          tooltip: 'Retirer la date de fin',
+                          icon: const Icon(Icons.close, size: 20),
+                          onPressed: () =>
+                              _update(() => _draft.interventionEndDate = null),
+                        ),
                       ),
                     ],
                   ),
