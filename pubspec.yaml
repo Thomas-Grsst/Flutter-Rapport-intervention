@@ -1,0 +1,46 @@
+name: rapport_intervention
+description: >-
+  Application mobile de saisie et de generation de rapports d'intervention
+  (assainissement, plomberie, maintenance) avec photos avant/pendant/apres,
+  signatures et export PDF.
+publish_to: "none"
+version: 1.0.0+1
+
+environment:
+  # Dart 3.6 = Flutter 3.27, première version où ThemeData.cardTheme attend un
+  # CardThemeData et où PopScope expose onPopInvokedWithResult.
+  sdk: ">=3.6.0 <4.0.0"
+
+dependencies:
+  flutter:
+    sdk: flutter
+  flutter_localizations:
+    sdk: flutter
+
+  # Laisse pub choisir la version d'intl compatible avec le SDK Flutter installe.
+  intl: any
+
+  cupertino_icons: ^1.0.8
+  provider: ^6.1.2
+  uuid: ^4.4.0
+  collection: ^1.18.0
+
+  path: ^1.9.0
+  path_provider: ^2.1.4
+
+  image_picker: ^1.1.2
+  signature: ^5.5.0
+
+  pdf: ^3.11.0
+  printing: ^5.13.0
+  share_plus: ^10.0.0
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^4.0.0
+
+flutter:
+  uses-material-design: true
+  # Le logo de l'entreprise est choisi par l'utilisateur dans les réglages et
+  # stocké sur l'appareil : l'application n'embarque aucun visuel en dur.
