@@ -54,44 +54,23 @@ du pied de page et de la pagination.
 
 ## Démarrage
 
-Le dépôt contient le code de l'application (`lib/`, `test/`, `pubspec.yaml`).
-Les dossiers de plateforme (`android/`, `ios/`) sont générés par Flutter, afin
-qu'ils correspondent à la version du SDK installée sur votre machine :
-
 ```bash
 git clone https://github.com/Thomas-Grsst/Flutter-Rapport-intervention.git
 cd Flutter-Rapport-intervention
-flutter create --platforms=android,ios .
 flutter pub get
 flutter run
 ```
 
-`flutter create .` ne touche ni à `lib/`, ni à `test/`, ni au `pubspec.yaml` :
-il ne fait qu'ajouter les dossiers de plateforme manquants.
+Android et iOS sont configurés, permissions caméra et galerie comprises.
 
-### Permissions à ajouter
+Développé et vérifié avec Flutter 3.47.3 / Dart 3.13.3. La plateforme visée
+est le mobile : `path_provider` n'ayant pas d'implémentation web, l'application
+ne tourne pas dans un navigateur.
 
-L'appareil photo et la galerie nécessitent une déclaration dans chaque
-plateforme.
-
-**`android/app/src/main/AndroidManifest.xml`**, dans `<manifest>` :
-
-```xml
-<uses-permission android:name="android.permission.CAMERA" />
-```
-
-**`ios/Runner/Info.plist`** :
-
-```xml
-<key>NSCameraUsageDescription</key>
-<string>Pour photographier l'intervention et l'illustrer dans le rapport.</string>
-<key>NSPhotoLibraryUsageDescription</key>
-<string>Pour joindre au rapport des photos déjà prises.</string>
-```
-
-### Tests
+### Vérifications
 
 ```bash
+flutter analyze
 flutter test
 ```
 

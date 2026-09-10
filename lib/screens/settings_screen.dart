@@ -119,7 +119,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
       onPopInvokedWithResult: (didPop, result) async {
         if (didPop) return;
         await _save();
-        if (mounted) Navigator.of(context).pop();
+        if (context.mounted) Navigator.of(context).pop();
       },
       child: Scaffold(
         appBar: AppBar(
@@ -128,7 +128,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
             TextButton(
               onPressed: () async {
                 await _save();
-                if (!mounted) return;
+                if (!context.mounted) return;
                 ScaffoldMessenger.of(context).showSnackBar(
                   const SnackBar(content: Text('Réglages enregistrés')),
                 );

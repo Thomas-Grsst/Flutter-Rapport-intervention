@@ -23,11 +23,11 @@ class PdfService {
 
   final StorageService _storage;
 
-  static final PdfColor brandDark = PdfColor.fromInt(0xFF104C7E);
-  static final PdfColor brandLight = PdfColor.fromInt(0xFF8FB8E8);
-  static final PdfColor paleBlue = PdfColor.fromInt(0xFFEAF2FB);
-  static final PdfColor lineGrey = PdfColor.fromInt(0xFFD5DEE8);
-  static final PdfColor textGrey = PdfColor.fromInt(0xFF5A6773);
+  static const PdfColor brandDark = PdfColor.fromInt(0xFF104C7E);
+  static const PdfColor brandLight = PdfColor.fromInt(0xFF8FB8E8);
+  static const PdfColor paleBlue = PdfColor.fromInt(0xFFEAF2FB);
+  static const PdfColor lineGrey = PdfColor.fromInt(0xFFD5DEE8);
+  static const PdfColor textGrey = PdfColor.fromInt(0xFF5A6773);
 
   static final DateFormat _dayFormat = DateFormat('dd/MM/yyyy');
 
@@ -139,7 +139,7 @@ class PdfService {
                   pw.Spacer(),
                   pw.Text(
                     "Rapport d'intervention",
-                    style: pw.TextStyle(
+                    style: const pw.TextStyle(
                       fontSize: 34,
                       fontWeight: pw.FontWeight.bold,
                       color: brandDark,
@@ -150,7 +150,7 @@ class PdfService {
                   pw.SizedBox(height: 22),
                   pw.Text(
                     report.displayTitle.toUpperCase(),
-                    style: pw.TextStyle(
+                    style: const pw.TextStyle(
                       fontSize: 18,
                       color: brandDark,
                       letterSpacing: 0.6,
@@ -159,13 +159,13 @@ class PdfService {
                   pw.SizedBox(height: 8),
                   pw.Text(
                     'Le ${_dayFormat.format(report.interventionDate)}',
-                    style: pw.TextStyle(fontSize: 14, color: textGrey),
+                    style: const pw.TextStyle(fontSize: 14, color: textGrey),
                   ),
                   pw.Spacer(),
                   if (company.name.isNotEmpty)
                     pw.Text(
                       company.name.toUpperCase(),
-                      style: pw.TextStyle(
+                      style: const pw.TextStyle(
                         fontSize: 16,
                         fontWeight: pw.FontWeight.bold,
                         color: brandDark,
@@ -174,7 +174,7 @@ class PdfService {
                   pw.SizedBox(height: 6),
                   pw.Text(
                     company.footerLine,
-                    style: pw.TextStyle(fontSize: 9.5, color: textGrey),
+                    style: const pw.TextStyle(fontSize: 9.5, color: textGrey),
                   ),
                 ],
               ),
@@ -227,7 +227,7 @@ class PdfService {
     return pw.Container(
       margin: const pw.EdgeInsets.only(bottom: 18),
       padding: const pw.EdgeInsets.only(bottom: 8),
-      decoration: pw.BoxDecoration(
+      decoration: const pw.BoxDecoration(
         border: pw.Border(bottom: pw.BorderSide(color: brandLight, width: 2)),
       ),
       child: pw.Row(
@@ -243,7 +243,7 @@ class PdfService {
             children: [
               pw.Text(
                 "Rapport d'intervention",
-                style: pw.TextStyle(
+                style: const pw.TextStyle(
                   fontSize: 12,
                   fontWeight: pw.FontWeight.bold,
                   color: brandDark,
@@ -251,7 +251,7 @@ class PdfService {
               ),
               pw.Text(
                 '${report.displayTitle} — ${_dayFormat.format(report.interventionDate)}',
-                style: pw.TextStyle(fontSize: 8.5, color: textGrey),
+                style: const pw.TextStyle(fontSize: 8.5, color: textGrey),
               ),
             ],
           ),
@@ -264,7 +264,7 @@ class PdfService {
     return pw.Container(
       margin: const pw.EdgeInsets.only(top: 12),
       padding: const pw.EdgeInsets.only(top: 6),
-      decoration: pw.BoxDecoration(
+      decoration: const pw.BoxDecoration(
         border: pw.Border(top: pw.BorderSide(color: lineGrey)),
       ),
       child: pw.Row(
@@ -274,13 +274,13 @@ class PdfService {
           pw.Expanded(
             child: pw.Text(
               company.footerLine,
-              style: pw.TextStyle(fontSize: 7.5, color: textGrey),
+              style: const pw.TextStyle(fontSize: 7.5, color: textGrey),
             ),
           ),
           pw.SizedBox(width: 12),
           pw.Text(
             '${context.pageNumber} / ${context.pagesCount}',
-            style: pw.TextStyle(fontSize: 7.5, color: textGrey),
+            style: const pw.TextStyle(fontSize: 7.5, color: textGrey),
           ),
         ],
       ),
@@ -380,7 +380,7 @@ class PdfService {
         children: [
           pw.Text(
             title,
-            style: pw.TextStyle(
+            style: const pw.TextStyle(
               fontSize: 10.5,
               fontWeight: pw.FontWeight.bold,
               color: brandDark,
@@ -419,7 +419,7 @@ class PdfService {
         children: [
           pw.Text(
             title,
-            style: pw.TextStyle(
+            style: const pw.TextStyle(
               fontSize: 15,
               fontWeight: pw.FontWeight.bold,
               color: brandDark,
@@ -496,7 +496,7 @@ class PdfService {
 
   pw.Widget _label(String text) => pw.Text(
         text,
-        style: pw.TextStyle(
+        style: const pw.TextStyle(
           fontSize: 10.5,
           fontWeight: pw.FontWeight.bold,
           color: brandDark,
@@ -512,7 +512,7 @@ class PdfService {
               width: 4,
               height: 4,
               margin: const pw.EdgeInsets.only(top: 4, right: 7),
-              decoration: pw.BoxDecoration(
+              decoration: const pw.BoxDecoration(
                 color: brandDark,
                 shape: pw.BoxShape.circle,
               ),
@@ -611,13 +611,16 @@ class PdfService {
                 ),
                 child: pw.Text(
                   photo.stage.label.toUpperCase(),
-                  style: pw.TextStyle(fontSize: 7, color: PdfColors.white),
+                  style: const pw.TextStyle(
+                    fontSize: 7,
+                    color: PdfColors.white,
+                  ),
                 ),
               ),
             pw.Expanded(
               child: pw.Text(
                 photo.caption,
-                style: pw.TextStyle(fontSize: 8.5, color: textGrey),
+                style: const pw.TextStyle(fontSize: 8.5, color: textGrey),
               ),
             ),
           ],
@@ -701,7 +704,7 @@ class PdfService {
                   padding: const pw.EdgeInsets.all(6),
                   child: pw.Text(
                     row[0],
-                    style: pw.TextStyle(
+                    style: const pw.TextStyle(
                       fontSize: 9.5,
                       fontWeight: pw.FontWeight.bold,
                       color: brandDark,
@@ -778,7 +781,7 @@ class PdfService {
       children: [
         pw.Text(
           title,
-          style: pw.TextStyle(
+          style: const pw.TextStyle(
             fontSize: 9.5,
             fontWeight: pw.FontWeight.bold,
             color: brandDark,
@@ -795,7 +798,7 @@ class PdfService {
               : pw.Image(signature, fit: pw.BoxFit.contain),
         ),
         pw.SizedBox(height: 5),
-        pw.Text(caption, style: pw.TextStyle(fontSize: 8.5, color: textGrey)),
+        pw.Text(caption, style: const pw.TextStyle(fontSize: 8.5, color: textGrey)),
       ],
     );
   }
@@ -804,7 +807,7 @@ class PdfService {
     final name = company.name.isEmpty ? "l'entreprise" : company.name;
     return pw.Container(
       padding: const pw.EdgeInsets.only(top: 10),
-      decoration: pw.BoxDecoration(
+      decoration: const pw.BoxDecoration(
         border: pw.Border(top: pw.BorderSide(color: lineGrey)),
       ),
       child: pw.Text(
@@ -812,7 +815,7 @@ class PdfService {
         "de l'intervention réalisée le ${_dayFormat.format(report.interventionDate)}. "
         "Toute nouvelle prestation fera l'objet d'un nouvel ordre de service et "
         "d'un nouveau dossier.",
-        style: pw.TextStyle(
+        style: const pw.TextStyle(
           fontSize: 7.5,
           color: textGrey,
           fontStyle: pw.FontStyle.italic,

@@ -4,35 +4,33 @@
 .pub-cache/
 .pub/
 build/
-pubspec.lock
 *.iml
 *.log
 
 # Outils
 .flutter-plugins
 .flutter-plugins-dependencies
-.metadata
 
 # IDE
 .idea/
 .vscode/
 *.swp
 
-# Android
+# Android — spécifique à la machine
 android/.gradle/
 android/local.properties
 android/key.properties
 android/app/*.jks
 android/app/*.keystore
-**/android/**/gradle-wrapper.jar
 
-# iOS / macOS
+# iOS / macOS — installé par pod install
 ios/Pods/
 ios/.symlinks/
 ios/Flutter/Flutter.framework
 ios/Flutter/Flutter.podspec
 ios/Flutter/Generated.xcconfig
 ios/Flutter/flutter_export_environment.sh
+ios/ServiceDefinitions.json
 macos/Pods/
 
 # Système
