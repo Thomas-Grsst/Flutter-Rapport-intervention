@@ -1,6 +1,6 @@
-import 'dart:io';
 import 'dart:typed_data';
 
+import 'package:flutter/services.dart' show rootBundle;
 import 'package:intl/intl.dart';
 import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
@@ -18,6 +18,20 @@ import 'storage_service.dart';
 /// actions, photographies, conclusions, points restants, récapitulatif et
 /// évaluation du client. Chaque page porte le bandeau de l'entreprise en
 /// pied de page ainsi que sa pagination.
+/// Un PDF genere : son contenu, son nom de fichier et l'endroit ou il a ete
+/// enregistre.
+class SavedPdf {
+  const SavedPdf({
+    required this.path,
+    required this.fileName,
+    required this.bytes,
+  });
+
+  final String path;
+  final String fileName;
+  final Uint8List bytes;
+}
+
 class PdfService {
   PdfService(this._storage);
 
@@ -30,6 +44,29 @@ class PdfService {
   static const PdfColor textGrey = PdfColor.fromInt(0xFF5A6773);
 
   static final DateFormat _dayFormat = DateFormat('dd/MM/yyyy');
+
+  /// Polices du document, chargées une fois pour toutes.
+  ///
+  /// Les polices intégrées au format PDF (Helvetica et consorts) ne couvrent
+  /// pas tout ce qu'un rapport en français contient : le « œ » de
+  /// « Matériel(s) mis en œuvre » et le tiret cadratin de l'en-tête en sont
+  /// absents et seraient tout simplement omis à l'impression. Roboto est
+  /// embarquée dans l'application pour que le PDF s'imprime à l'identique
+  /// partout, y compris hors ligne sur un chantier.
+  Future<pw.ThemeData> get _theme async => _themeFuture ??= _loadTheme();
+  Future<pw.ThemeData>? _themeFuture;
+
+  Future<pw.ThemeData> _loadTheme() async => pw.ThemeData.withFont(
+        base: await _font(regularFontAsset),
+        bold: await _font('assets/fonts/Roboto-Bold.ttf'),
+        italic: await _font('assets/fonts/Roboto-Italic.ttf'),
+      );
+
+  /// La police du corps du rapport.
+  static const String regularFontAsset = 'assets/fonts/Roboto-Regular.ttf';
+
+  Future<pw.Font> _font(String asset) async =>
+      pw.Font.ttf(await rootBundle.load(asset));
 
   Future<Uint8List> buildReportPdf({
     required Report report,
@@ -49,6 +86,7 @@ class PdfService {
       title: 'Rapport d\'intervention ${report.reportNumber}'.trim(),
       author: company.displayName,
       subject: report.displayTitle,
+      theme: await _theme,
     );
 
     doc.addPage(_coverPage(report: report, company: company, logo: logo));
@@ -67,13 +105,18 @@ class PdfService {
   }
 
   /// Génère le PDF et l'enregistre dans le dossier "rapports" de
-  /// l'application. Renvoie le fichier créé.
-  Future<File> saveReportPdf({
+  /// l'application.
+  ///
+  /// Renvoie le PDF et son emplacement : l'écran qui l'a demandé doit pouvoir
+  /// l'imprimer et l'envoyer dans la foulée sans avoir à le relire.
+  Future<SavedPdf> saveReportPdf({
     required Report report,
     required Company company,
   }) async {
     final bytes = await buildReportPdf(report: report, company: company);
-    return _storage.writePdf(fileNameFor(report), bytes);
+    final fileName = fileNameFor(report);
+    final path = await _storage.writePdf(fileName, bytes);
+    return SavedPdf(path: path, fileName: fileName, bytes: bytes);
   }
 
   /// "Rapport_ASE-120326-MB_BLANC.pdf"
@@ -438,13 +481,38 @@ class PdfService {
         margin: const pw.EdgeInsets.only(bottom: 6),
       );
 
+  /// Regroupe des éléments pour que la coupure entre deux pages ne tombe
+  /// jamais entre eux.
+  ///
+  /// Sert à ne pas laisser un titre de section seul en bas d'une page, son
+  /// contenu commençant sur la suivante. À n'utiliser que sur des blocs dont
+  /// la hauteur est bornée : un bloc insécable plus haut qu'une page ne
+  /// pourrait être posé nulle part.
+  pw.Widget _keepTogether(List<pw.Widget> children) => pw.Inseparable(
+        child: pw.Column(
+          crossAxisAlignment: pw.CrossAxisAlignment.start,
+          children: children,
+        ),
+      );
+
+  /// Au-delà de cette longueur, un paragraphe remplit de toute façon le bas de
+  /// la page et se poursuit sur la suivante : son titre n'y reste pas seul, et
+  /// le rendre insécable ferait un bloc trop haut pour tenir sur une page.
+  static const int _keepWithTitleLimit = 900;
+
   /// Renvoie une section complète, ou rien du tout si le contenu est vide :
   /// un rapport ne doit pas afficher de titre orphelin.
   List<pw.Widget> _textSection(String title, String content) {
-    if (content.trim().isEmpty) return const <pw.Widget>[];
+    final text = content.trim();
+    if (text.isEmpty) return const <pw.Widget>[];
+
     return [
-      _sectionTitle(title),
-      _paragraph(content.trim()),
+      if (text.length <= _keepWithTitleLimit)
+        _keepTogether([_sectionTitle(title), _paragraph(text)])
+      else ...[
+        _sectionTitle(title),
+        _paragraph(text),
+      ],
       pw.SizedBox(height: 14),
     ];
   }
@@ -466,21 +534,30 @@ class PdfService {
       return const <pw.Widget>[];
     }
 
+    final hasConstat =
+        report.findingTags.isNotEmpty || report.findings.trim().isNotEmpty;
+
     return [
-      _sectionTitle('Constats et Actions'),
-      if (report.occupant.trim().isNotEmpty)
-        pw.Padding(
-          padding: const pw.EdgeInsets.only(bottom: 8),
-          child: pw.Text(
-            'Occupant : ${report.occupant.trim()}',
-            style: const pw.TextStyle(fontSize: 10),
+      // Le titre reste avec l'occupant et l'intitulé « Constat : », qui
+      // n'auraient aucun sens séparés de lui.
+      _keepTogether([
+        _sectionTitle('Constats et Actions'),
+        if (report.occupant.trim().isNotEmpty)
+          pw.Padding(
+            padding: const pw.EdgeInsets.only(bottom: 8),
+            child: pw.Text(
+              'Occupant : ${report.occupant.trim()}',
+              style: const pw.TextStyle(fontSize: 10),
+            ),
           ),
-        ),
-      if (report.findingTags.isNotEmpty || report.findings.trim().isNotEmpty)
-        _label('Constat :'),
+        if (hasConstat) _label('Constat :'),
+        if (report.findingTags.isNotEmpty) ...[
+          pw.SizedBox(height: 4),
+          _bullet(report.findingTags.first),
+        ],
+      ]),
       if (report.findingTags.isNotEmpty) ...[
-        pw.SizedBox(height: 4),
-        for (final tag in report.findingTags) _bullet(tag),
+        for (final tag in report.findingTags.skip(1)) _bullet(tag),
         pw.SizedBox(height: 4),
       ],
       if (report.findings.trim().isNotEmpty) _paragraph(report.findings.trim()),
@@ -571,10 +648,15 @@ class PdfService {
       );
     }
 
+    // Le titre part avec la première ligne de photos : un titre seul en bas
+    // d'une page, les photos sur la suivante, se remarque tout de suite.
     return [
-      _sectionTitle("Photographies de l'intervention"),
-      pw.SizedBox(height: 4),
-      ...rows,
+      _keepTogether([
+        _sectionTitle("Photographies de l'intervention"),
+        pw.SizedBox(height: 4),
+        rows.first,
+      ]),
+      ...rows.skip(1),
       pw.SizedBox(height: 8),
     ];
   }
@@ -637,7 +719,10 @@ class PdfService {
       return const <pw.Widget>[];
     }
 
-    return [
+    final conclusions = report.conclusions.trim();
+    final remaining = report.remainingPoints.trim();
+
+    final header = <pw.Widget>[
       _sectionTitle('Conclusions'),
       pw.Container(
         padding: const pw.EdgeInsets.symmetric(horizontal: 10, vertical: 5),
@@ -657,14 +742,32 @@ class PdfService {
         ),
       ),
       pw.SizedBox(height: 10),
-      if (report.conclusions.trim().isNotEmpty) ...[
+    ];
+
+    final conclusionBlock = <pw.Widget>[
+      if (conclusions.isNotEmpty) ...[
         _label('Conclusions :'),
-        _paragraph(report.conclusions.trim()),
+        _paragraph(conclusions),
       ],
-      if (report.remainingPoints.trim().isNotEmpty) ...[
+    ];
+
+    return [
+      // Le statut de l'intervention et le début de la conclusion partent avec
+      // le titre : c'est le passage que le client lit en premier.
+      if (conclusions.length <= _keepWithTitleLimit)
+        _keepTogether([...header, ...conclusionBlock])
+      else ...[
+        _keepTogether(header),
+        ...conclusionBlock,
+      ],
+      if (remaining.isNotEmpty) ...[
         pw.SizedBox(height: 6),
-        _label('Points restants :'),
-        _paragraph(report.remainingPoints.trim()),
+        if (remaining.length <= _keepWithTitleLimit)
+          _keepTogether([_label('Points restants :'), _paragraph(remaining)])
+        else ...[
+          _label('Points restants :'),
+          _paragraph(remaining),
+        ],
       ],
       pw.SizedBox(height: 14),
     ];
@@ -687,41 +790,45 @@ class PdfService {
         ['À transmettre :', report.documentsToTransmit.trim()],
     ];
 
+    // Le tableau récapitulatif fait au plus trois lignes : il tient avec son
+    // titre sur n'importe quelle page.
     return [
-      _sectionTitle('Intervention'),
-      pw.Table(
-        columnWidths: const {
-          0: pw.FixedColumnWidth(120),
-          1: pw.FlexColumnWidth(),
-        },
-        border: pw.TableBorder.all(color: lineGrey),
-        children: [
-          for (final row in rows)
-            pw.TableRow(
-              children: [
-                pw.Container(
-                  color: paleBlue,
-                  padding: const pw.EdgeInsets.all(6),
-                  child: pw.Text(
-                    row[0],
-                    style: const pw.TextStyle(
-                      fontSize: 9.5,
-                      fontWeight: pw.FontWeight.bold,
-                      color: brandDark,
+      _keepTogether([
+        _sectionTitle('Intervention'),
+        pw.Table(
+          columnWidths: const {
+            0: pw.FixedColumnWidth(120),
+            1: pw.FlexColumnWidth(),
+          },
+          border: pw.TableBorder.all(color: lineGrey),
+          children: [
+            for (final row in rows)
+              pw.TableRow(
+                children: [
+                  pw.Container(
+                    color: paleBlue,
+                    padding: const pw.EdgeInsets.all(6),
+                    child: pw.Text(
+                      row[0],
+                      style: const pw.TextStyle(
+                        fontSize: 9.5,
+                        fontWeight: pw.FontWeight.bold,
+                        color: brandDark,
+                      ),
                     ),
                   ),
-                ),
-                pw.Padding(
-                  padding: const pw.EdgeInsets.all(6),
-                  child: pw.Text(
-                    row[1],
-                    style: const pw.TextStyle(fontSize: 9.5),
+                  pw.Padding(
+                    padding: const pw.EdgeInsets.all(6),
+                    child: pw.Text(
+                      row[1],
+                      style: const pw.TextStyle(fontSize: 9.5),
+                    ),
                   ),
-                ),
-              ],
-            ),
-        ],
-      ),
+                ],
+              ),
+          ],
+        ),
+      ]),
       pw.SizedBox(height: 18),
     ];
   }
@@ -734,40 +841,54 @@ class PdfService {
     pw.MemoryImage? clientSignature,
     pw.MemoryImage? technicianSignature,
   }) {
-    return [
+    final evaluation = report.clientEvaluation.trim();
+
+    final signatures = pw.Row(
+      crossAxisAlignment: pw.CrossAxisAlignment.start,
+      children: [
+        pw.Expanded(
+          child: _signatureBox(
+            title: "Signature de l'intervenant",
+            caption: [
+              report.technicianName,
+              company.name,
+              'Le : ${_dayFormat.format(report.interventionDate)}',
+            ].where((line) => line.trim().isNotEmpty).join('\n'),
+            signature: technicianSignature,
+          ),
+        ),
+        pw.SizedBox(width: 16),
+        pw.Expanded(
+          child: _signatureBox(
+            title: 'Signature du client',
+            caption: report.clientName,
+            signature: clientSignature,
+          ),
+        ),
+      ],
+    );
+
+    final header = <pw.Widget>[
       _sectionTitle('Évaluation du client'),
-      if (report.clientEvaluation.trim().isNotEmpty)
-        _paragraph(report.clientEvaluation.trim())
+      if (evaluation.isNotEmpty)
+        _paragraph(evaluation)
       else
         pw.Container(
           height: 40,
           decoration: pw.BoxDecoration(border: pw.Border.all(color: lineGrey)),
         ),
       pw.SizedBox(height: 18),
-      pw.Row(
-        crossAxisAlignment: pw.CrossAxisAlignment.start,
-        children: [
-          pw.Expanded(
-            child: _signatureBox(
-              title: "Signature de l'intervenant",
-              caption: [
-                report.technicianName,
-                company.name,
-                'Le : ${_dayFormat.format(report.interventionDate)}',
-              ].where((line) => line.trim().isNotEmpty).join('\n'),
-              signature: technicianSignature,
-            ),
-          ),
-          pw.SizedBox(width: 16),
-          pw.Expanded(
-            child: _signatureBox(
-              title: 'Signature du client',
-              caption: report.clientName,
-              signature: clientSignature,
-            ),
-          ),
-        ],
-      ),
+    ];
+
+    // Les deux cadres de signature ne se coupent pas en deux : ils partent
+    // ensemble sur la page suivante s'il n'y a plus la place.
+    return [
+      if (evaluation.length <= _keepWithTitleLimit)
+        _keepTogether([...header, signatures])
+      else ...[
+        ...header,
+        pw.Inseparable(child: signatures),
+      ],
     ];
   }
 

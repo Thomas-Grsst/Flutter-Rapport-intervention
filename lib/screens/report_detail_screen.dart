@@ -1,5 +1,3 @@
-import 'dart:io';
-
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:printing/printing.dart';
@@ -12,6 +10,7 @@ import '../services/pdf_service.dart';
 import '../state/reports_provider.dart';
 import '../state/settings_provider.dart';
 import '../theme.dart';
+import '../widgets/media_image.dart';
 import '../widgets/section_card.dart';
 import '../widgets/status_chip.dart';
 import 'report_wizard_screen.dart';
@@ -83,15 +82,15 @@ class _ReportDetailScreenState extends State<ReportDetailScreen> {
 
     setState(() => _generating = true);
     try {
-      final file = await pdfService.saveReportPdf(
+      final pdf = await pdfService.saveReportPdf(
         report: report,
         company: company,
       );
-      report.lastPdfPath = file.path;
+      report.lastPdfPath = pdf.path;
       await reports.save(report);
 
       if (!mounted) return;
-      await _showPdfActions(report, file);
+      await _showPdfActions(report, pdf);
     } on Exception catch (error) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -103,7 +102,7 @@ class _ReportDetailScreenState extends State<ReportDetailScreen> {
     }
   }
 
-  Future<void> _showPdfActions(Report report, File file) async {
+  Future<void> _showPdfActions(Report report, SavedPdf pdf) async {
     await showModalBottomSheet<void>(
       context: context,
       builder: (sheetContext) => SafeArea(
@@ -129,10 +128,9 @@ class _ReportDetailScreenState extends State<ReportDetailScreen> {
               title: const Text('Aperçu / Imprimer'),
               onTap: () async {
                 Navigator.of(sheetContext).pop();
-                final bytes = await file.readAsBytes();
                 await Printing.layoutPdf(
-                  onLayout: (_) async => bytes,
-                  name: file.uri.pathSegments.last,
+                  onLayout: (_) async => pdf.bytes,
+                  name: pdf.fileName,
                 );
               },
             ),
@@ -142,8 +140,16 @@ class _ReportDetailScreenState extends State<ReportDetailScreen> {
               subtitle: const Text('E-mail, SMS, WhatsApp…'),
               onTap: () async {
                 Navigator.of(sheetContext).pop();
+                // On partage les octets plutôt qu'un chemin : dans un
+                // navigateur, le PDF n'existe pas comme fichier sur le disque.
                 await Share.shareXFiles(
-                  [XFile(file.path, mimeType: 'application/pdf')],
+                  [
+                    XFile.fromData(
+                      pdf.bytes,
+                      name: pdf.fileName,
+                      mimeType: 'application/pdf',
+                    ),
+                  ],
                   subject: "Rapport d'intervention "
                       '${report.reportNumber} — ${report.displayTitle}',
                   text: 'Bonjour,\n\nVeuillez trouver ci-joint le rapport de '
@@ -275,6 +281,7 @@ class _ReportDetailScreenState extends State<ReportDetailScreen> {
           value: _dateFormat.format(report.interventionDate),
         ),
         InfoLine(label: 'N° rapport', value: report.reportNumber),
+        InfoLine(label: 'V/Réf', value: report.reference),
         InfoLine(label: 'Intervenant', value: report.technicianName),
         InfoLine(
           label: 'Horaires',
@@ -349,15 +356,12 @@ class _ReportDetailScreenState extends State<ReportDetailScreen> {
             separatorBuilder: (_, __) => const SizedBox(width: 8),
             itemBuilder: (context, index) {
               final photo = report.photos[index];
-              final file = File(photo.filePath);
               return ClipRRect(
                 borderRadius: BorderRadius.circular(10),
                 child: SizedBox(
                   width: 96,
                   height: 96,
-                  child: file.existsSync()
-                      ? Image.file(file, fit: BoxFit.cover)
-                      : Container(color: AppColors.paleBlue),
+                  child: MediaImage(path: photo.filePath),
                 ),
               );
             },
@@ -424,9 +428,6 @@ class _ReportDetailScreenState extends State<ReportDetailScreen> {
   }
 
   Widget _signaturePreview(String label, String? path) {
-    final file = path == null ? null : File(path);
-    final exists = file != null && file.existsSync();
-
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -441,17 +442,19 @@ class _ReportDetailScreenState extends State<ReportDetailScreen> {
             border: Border.all(color: const Color(0xFFD5DEE8)),
             borderRadius: BorderRadius.circular(8),
           ),
-          child: exists
-              ? Padding(
-                  padding: const EdgeInsets.all(4),
-                  child: Image.file(file, fit: BoxFit.contain),
-                )
-              : const Center(
-                  child: Text(
-                    'Non signé',
-                    style: TextStyle(fontSize: 12, color: Color(0xFF8A97A3)),
-                  ),
+          child: Padding(
+            padding: const EdgeInsets.all(4),
+            child: MediaImage(
+              path: path,
+              fit: BoxFit.contain,
+              placeholder: const Center(
+                child: Text(
+                  'Non signé',
+                  style: TextStyle(fontSize: 12, color: Color(0xFF8A97A3)),
                 ),
+              ),
+            ),
+          ),
         ),
       ],
     );

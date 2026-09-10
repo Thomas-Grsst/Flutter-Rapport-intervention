@@ -26,7 +26,15 @@ dependencies:
   collection: ^1.18.0
 
   path: ^1.9.0
+  # path_provider n'a pas d'implementation web : il n'est importe que par le
+  # stockage sur fichiers, choisi par import conditionnel sur mobile.
   path_provider: ^2.1.4
+
+  # Lecture d'un fichier choisi par l'utilisateur, quelle que soit la
+  # plateforme (chemin sur mobile, URL de blob dans un navigateur).
+  cross_file: ^0.3.4
+  # Stockage du navigateur, utilise par la version web de StorageService.
+  web: ^1.1.0
 
   image_picker: ^1.1.2
   signature: ^5.5.0
@@ -42,5 +50,13 @@ dev_dependencies:
 
 flutter:
   uses-material-design: true
+
+  # Polices du PDF. Les polices intégrées au format PDF ne couvrent pas le
+  # « œ » ni le tiret cadratin ; les embarquer garantit que le rapport
+  # s'imprime à l'identique partout, sans connexion.
+  # Roboto — Apache License 2.0, voir assets/fonts/LICENSE.txt
+  assets:
+    - assets/fonts/
+
   # Le logo de l'entreprise est choisi par l'utilisateur dans les réglages et
   # stocké sur l'appareil : l'application n'embarque aucun visuel en dur.

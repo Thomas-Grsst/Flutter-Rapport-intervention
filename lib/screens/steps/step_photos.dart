@@ -1,5 +1,3 @@
-import 'dart:io';
-
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:provider/provider.dart';
@@ -10,6 +8,7 @@ import '../../models/report.dart';
 import '../../services/storage_service.dart';
 import '../../state/reports_provider.dart';
 import '../../theme.dart';
+import '../../widgets/media_image.dart';
 import '../../widgets/preset_chips.dart';
 import '../../widgets/question_block.dart';
 
@@ -276,8 +275,6 @@ class _PhotosStepState extends State<PhotosStep> {
   }
 
   Widget _thumbnail(PhotoItem photo) {
-    final file = File(photo.filePath);
-
     return GestureDetector(
       onTap: () => _editPhoto(photo),
       child: SizedBox(
@@ -290,13 +287,7 @@ class _PhotosStepState extends State<PhotosStep> {
               child: SizedBox(
                 width: 96,
                 height: 96,
-                child: file.existsSync()
-                    ? Image.file(file, fit: BoxFit.cover)
-                    : Container(
-                        color: AppColors.paleBlue,
-                        child: const Icon(Icons.broken_image_outlined,
-                            color: AppColors.brandLight),
-                      ),
+                child: MediaImage(path: photo.filePath),
               ),
             ),
             if (photo.caption.isNotEmpty)

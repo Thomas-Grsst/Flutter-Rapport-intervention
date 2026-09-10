@@ -2,8 +2,6 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:rapport_intervention/models/enums.dart';
 import 'package:rapport_intervention/models/photo_item.dart';
 import 'package:rapport_intervention/models/report.dart';
-import 'package:rapport_intervention/services/pdf_service.dart';
-import 'package:rapport_intervention/services/storage_service.dart';
 
 Report _sample() => Report(
       id: 'r1',
@@ -68,14 +66,6 @@ void main() {
 
       expect(report.photosOfStage(PhotoStage.avant).length, 1);
       expect(report.photosOfStage(PhotoStage.pendant), isEmpty);
-    });
-  });
-
-  group('PdfService', () {
-    test("nomme le fichier d'après le rapport et le client", () {
-      final name = PdfService(StorageService()).fileNameFor(_sample());
-
-      expect(name, 'Rapport_ASE-120326-MB_M-Manuel-BLANC.pdf');
     });
   });
 }

@@ -1,4 +1,3 @@
-import 'dart:io';
 import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
@@ -9,6 +8,7 @@ import '../../models/report.dart';
 import '../../services/storage_service.dart';
 import '../../theme.dart';
 import '../../widgets/app_text_field.dart';
+import '../../widgets/media_image.dart';
 import '../../widgets/question_block.dart';
 
 /// Étape 7 — évaluation du client et signatures.
@@ -134,8 +134,7 @@ class _SignatureStepState extends State<SignatureStep> {
     required String? path,
     required bool isClient,
   }) {
-    final file = path == null ? null : File(path);
-    final hasSignature = file != null && file.existsSync();
+    final hasSignature = path != null && path.isNotEmpty;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -160,7 +159,7 @@ class _SignatureStepState extends State<SignatureStep> {
           child: hasSignature
               ? Padding(
                   padding: const EdgeInsets.all(8),
-                  child: Image.file(file, fit: BoxFit.contain),
+                  child: MediaImage(path: path, fit: BoxFit.contain),
                 )
               : Center(
                   child: TextButton.icon(

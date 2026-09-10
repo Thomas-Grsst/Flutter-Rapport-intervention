@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <!--
+    Chemin de base de l'application. Remplace par la valeur de --base-href au
+    moment du build : le laisser tel quel permet de servir l'application aussi
+    bien a la racine d'un domaine que dans un sous-dossier.
+  -->
+  <base href="$FLUTTER_BASE_HREF">
+
+  <meta charset="UTF-8">
+  <meta content="IE=Edge" http-equiv="X-UA-Compatible">
+  <meta name="description"
+        content="Saisie et generation de rapports d'intervention depuis le chantier.">
+  <meta name="theme-color" content="#104C7E">
+
+  <!-- Ajout a l'ecran d'accueil sur iOS -->
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black">
+  <meta name="apple-mobile-web-app-title" content="Rapports">
+  <link rel="apple-touch-icon" href="icons/Icon-192.png">
+
+  <link rel="icon" type="image/png" href="favicon.png"/>
+
+  <title>Rapports d'intervention</title>
+  <link rel="manifest" href="manifest.json">
+
+  <style>
+    /* Fond aux couleurs de l'application pendant le chargement, pour eviter
+       le rectangle blanc entre l'ouverture de la page et le premier ecran. */
+    body {
+      margin: 0;
+      background-color: #104C7E;
+    }
+  </style>
+</head>
+<body>
+  <script src="flutter_bootstrap.js" async></script>
+</body>
+</html>

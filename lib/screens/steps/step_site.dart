@@ -231,6 +231,19 @@ class _SiteStepState extends State<SiteStep> {
           ),
         ),
         QuestionBlock(
+          question: 'Le client a-t-il donné une référence ?',
+          hint: 'Numéro de devis, de commande ou de dossier du client. '
+              'Il apparaît en « V/Réf » sur le rapport.',
+          optional: true,
+          child: AppTextField(
+            initialValue: _draft.reference,
+            hint: 'Ex. : DEV-2026-0148',
+            prefixIcon: Icons.tag_outlined,
+            textCapitalization: TextCapitalization.characters,
+            onChanged: (value) => _update(() => _draft.reference = value),
+          ),
+        ),
+        QuestionBlock(
           question: "Quand l'intervention a-t-elle eu lieu ?",
           child: OutlinedButton.icon(
             onPressed: _pickDate,
@@ -302,7 +315,9 @@ class _SiteStepState extends State<SiteStep> {
       key: key,
       children: [
         SizedBox(
-          width: 120,
+          // Assez large pour que « Code postal » s'affiche en entier : le
+          // libellé tronqué en « Code pos… » se lisait mal.
+          width: 138,
           child: AppTextField(
             initialValue: postalCode,
             hint: 'Code postal',

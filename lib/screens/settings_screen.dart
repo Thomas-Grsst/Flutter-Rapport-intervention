@@ -1,5 +1,3 @@
-import 'dart:io';
-
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:provider/provider.dart';
@@ -9,6 +7,7 @@ import '../models/company.dart';
 import '../state/settings_provider.dart';
 import '../theme.dart';
 import '../widgets/app_text_field.dart';
+import '../widgets/media_image.dart';
 import '../widgets/preset_chips.dart';
 import '../widgets/section_card.dart';
 
@@ -197,7 +196,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
         Row(
           children: [
             SizedBox(
-              width: 120,
+              width: 138,
               child: AppTextField(
                 initialValue: _company.postalCode,
                 hint: 'Code postal',
@@ -258,8 +257,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
   Widget _logoCard() {
     final path = _company.logoPath;
-    final file = path == null ? null : File(path);
-    final hasLogo = file != null && file.existsSync();
+    final hasLogo = path != null && path.isNotEmpty;
 
     return SectionCard(
       title: 'Logo',
@@ -277,7 +275,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
               ),
               padding: const EdgeInsets.all(6),
               child: hasLogo
-                  ? Image.file(file, fit: BoxFit.contain)
+                  ? MediaImage(path: path, fit: BoxFit.contain)
                   : const Icon(Icons.image_outlined,
                       color: AppColors.brandLight, size: 30),
             ),
