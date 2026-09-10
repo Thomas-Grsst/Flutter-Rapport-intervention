@@ -7,6 +7,7 @@ import 'package:pdf/widgets.dart' as pw;
 
 import '../models/company.dart';
 import '../models/enums.dart';
+import '../models/photo_group.dart';
 import '../models/photo_item.dart';
 import '../models/report.dart';
 import 'storage_service.dart';
@@ -654,50 +655,35 @@ class PdfService {
 
   // --- Photographies --------------------------------------------------------
 
-  /// Les photos sont posées deux par ligne. Chaque ligne est un enfant
-  /// distinct du MultiPage pour que la coupure entre deux pages tombe
-  /// toujours entre deux lignes, jamais au milieu d'une image.
+  /// Les photos sont imprimées lot par lot : une ligne par point de
+  /// l'intervention, trois colonnes — avant, pendant, après. L'« après » d'un
+  /// point tombe ainsi en face de son « avant », ce qui se lit d'un coup d'œil.
+  ///
+  /// Chaque lot est un enfant distinct du MultiPage, pour que la coupure
+  /// entre deux pages tombe entre deux lots et jamais au milieu de l'un d'eux.
   List<pw.Widget> _photoSection(
     Report report,
     Map<String, pw.MemoryImage> images,
   ) {
-    final printable =
-        report.photos.where((photo) => images.containsKey(photo.id)).toList();
-    if (printable.isEmpty) return const <pw.Widget>[];
+    bool printable(PhotoItem photo) => images.containsKey(photo.id);
 
-    // On respecte l'ordre logique avant / pendant / après.
-    final ordered = <PhotoItem>[
-      ...printable.where((p) => p.stage == PhotoStage.avant),
-      ...printable.where((p) => p.stage == PhotoStage.pendant),
-      ...printable.where((p) => p.stage == PhotoStage.apres),
-      ...printable.where((p) => p.stage == PhotoStage.autre),
+    final groups = report.photoGroups
+        .where((group) => group.photos.any(printable))
+        .toList();
+    if (groups.isEmpty) return const <pw.Widget>[];
+
+    final rows = <pw.Widget>[
+      for (var i = 0; i < groups.length; i++)
+        _photoGroupRow(
+          group: groups[i],
+          index: i,
+          images: images,
+          showLabel: groups.length > 1 || groups[i].label.trim().isNotEmpty,
+        ),
     ];
 
-    final rows = <pw.Widget>[];
-    for (var i = 0; i < ordered.length; i += 2) {
-      final left = ordered[i];
-      final right = i + 1 < ordered.length ? ordered[i + 1] : null;
-      rows.add(
-        pw.Padding(
-          padding: const pw.EdgeInsets.only(bottom: 12),
-          child: pw.Row(
-            crossAxisAlignment: pw.CrossAxisAlignment.start,
-            children: [
-              pw.Expanded(child: _photoCard(left, images[left.id]!)),
-              pw.SizedBox(width: 12),
-              pw.Expanded(
-                child: right == null
-                    ? pw.SizedBox()
-                    : _photoCard(right, images[right.id]!),
-              ),
-            ],
-          ),
-        ),
-      );
-    }
-
-    // Le titre part avec la première ligne de photos : un titre seul en bas
-    // d'une page, les photos sur la suivante, se remarque tout de suite.
+    // Le titre part avec le premier lot : un titre seul en bas d'une page,
+    // les photos sur la suivante, se remarque tout de suite.
     return [
       _keepTogether([
         _sectionTitle("Photographies de l'intervention"),
@@ -709,12 +695,75 @@ class PdfService {
     ];
   }
 
+  pw.Widget _photoGroupRow({
+    required PhotoGroup group,
+    required int index,
+    required Map<String, pw.MemoryImage> images,
+    required bool showLabel,
+  }) {
+    const stages = [PhotoStage.avant, PhotoStage.pendant, PhotoStage.apres];
+
+    // Les photos qu'aucun moment ne réclame — un import d'une version
+    // précédente — rejoignent la colonne « avant » plutôt que d'être perdues.
+    List<PhotoItem> ofColumn(PhotoStage stage) => group.photos
+        .where((photo) =>
+            images.containsKey(photo.id) &&
+            (photo.stage == stage ||
+                (stage == PhotoStage.avant && photo.stage == PhotoStage.autre)))
+        .toList();
+
+    final label = group.label.trim();
+
+    return pw.Padding(
+      padding: const pw.EdgeInsets.only(bottom: 12),
+      child: pw.Column(
+        crossAxisAlignment: pw.CrossAxisAlignment.start,
+        children: [
+          if (showLabel)
+            pw.Padding(
+              padding: const pw.EdgeInsets.only(bottom: 5),
+              child: pw.Text(
+                label.isEmpty ? 'Lot ${index + 1}' : label,
+                style: const pw.TextStyle(
+                  fontSize: 9.5,
+                  fontWeight: pw.FontWeight.bold,
+                  color: brandDark,
+                ),
+              ),
+            ),
+          pw.Row(
+            crossAxisAlignment: pw.CrossAxisAlignment.start,
+            children: [
+              for (final stage in stages) ...[
+                pw.Expanded(
+                  child: pw.Column(
+                    crossAxisAlignment: pw.CrossAxisAlignment.start,
+                    children: [
+                      for (final photo in ofColumn(stage))
+                        pw.Padding(
+                          padding: const pw.EdgeInsets.only(bottom: 6),
+                          child: _photoCard(photo, images[photo.id]!),
+                        ),
+                    ],
+                  ),
+                ),
+                if (stage != stages.last) pw.SizedBox(width: 10),
+              ],
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
   pw.Widget _photoCard(PhotoItem photo, pw.MemoryImage image) {
     return pw.Column(
       crossAxisAlignment: pw.CrossAxisAlignment.start,
       children: [
         pw.Container(
-          height: 165,
+          // Trois colonnes par ligne : la vignette est plus étroite qu'avant,
+          // et une hauteur de 165 l'aurait rendue très verticale.
+          height: 112,
           width: double.infinity,
           decoration: pw.BoxDecoration(
             border: pw.Border.all(color: lineGrey),

@@ -172,6 +172,30 @@ void main() {
     expect(saved.interventionEndDate!.day, end.day);
   });
 
+  testWidgets('les photos se rangent en lots', (tester) async {
+    final reports = await _pumpWizard(tester, storage: FakeStorage());
+
+    for (var i = 0; i < 4; i++) {
+      await _next(tester); // jusqu'à l'étape Photos
+    }
+
+    // Un lot vide attend déjà : l'étape ne s'ouvre pas sur un écran nu.
+    expect(find.text('Lot 1'), findsOneWidget);
+    expect(find.text('Avant'), findsOneWidget);
+    expect(find.text('Pendant'), findsOneWidget);
+    expect(find.text('Après'), findsOneWidget);
+
+    await _tap(tester, find.text('Ajouter un lot'));
+    expect(find.text('Lot 2'), findsOneWidget);
+    expect(find.text('Avant'), findsNWidgets(2));
+
+    await _next(tester);
+
+    // Les lots vides ne partent pas au rapport.
+    expect(reports.all.single.photoGroups, hasLength(2));
+    expect(reports.all.single.filledPhotoGroups, isEmpty);
+  });
+
   testWidgets('la dernière étape liste ce qui reste à compléter',
       (tester) async {
     await _pumpWizard(tester, storage: FakeStorage());

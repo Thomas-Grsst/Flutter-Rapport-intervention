@@ -4,6 +4,7 @@ import 'package:uuid/uuid.dart';
 
 import '../models/app_settings.dart';
 import '../models/enums.dart';
+import '../models/photo_group.dart';
 import '../models/photo_item.dart';
 import '../models/report.dart';
 import '../services/storage_service.dart';
@@ -166,7 +167,7 @@ class ReportsProvider extends ChangeNotifier {
       'createdAt': now.toIso8601String(),
       'updatedAt': now.toIso8601String(),
       'interventionDate': now.toIso8601String(),
-      'photos': <dynamic>[],
+      'photoGroups': <dynamic>[],
       'status': ReportStatus.brouillon.name,
       'reportNumber': '',
       'clientSignaturePath': null,
@@ -179,6 +180,9 @@ class ReportsProvider extends ChangeNotifier {
   /// Ajoute une photo déjà importée dans le dossier de l'application.
   PhotoItem buildPhoto(String filePath, PhotoStage stage) =>
       PhotoItem(id: _uuid.v4(), filePath: filePath, stage: stage);
+
+  /// Un nouveau lot de photos, vide, pour un point de l'intervention.
+  PhotoGroup buildPhotoGroup() => PhotoGroup(id: _uuid.v4());
 
   /// Numéro de rapport type "ASE-120326-MB" : préfixe entreprise, date
   /// d'intervention, initiales du client. Un suffixe est ajouté si ce numéro

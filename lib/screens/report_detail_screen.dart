@@ -348,7 +348,10 @@ class _ReportDetailScreenState extends State<ReportDetailScreen> {
 
   Widget _photosCard(Report report) {
     return SectionCard(
-      title: 'Photographies (${report.photos.length})',
+      title: report.filledPhotoGroups.length > 1
+          ? 'Photographies (${report.photos.length} en '
+              '${report.filledPhotoGroups.length} lots)'
+          : 'Photographies (${report.photos.length})',
       icon: Icons.photo_camera_outlined,
       children: [
         SizedBox(

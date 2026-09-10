@@ -1,5 +1,6 @@
 import 'company.dart';
 import 'enums.dart';
+import 'photo_group.dart';
 import 'photo_item.dart';
 
 /// Un rapport d'intervention.
@@ -40,7 +41,7 @@ class Report {
     List<String>? findingTags,
     this.findings = '',
     List<String>? actions,
-    List<PhotoItem>? photos,
+    List<PhotoGroup>? photoGroups,
     this.status = ReportStatus.brouillon,
     this.conclusions = '',
     this.remainingPoints = '',
@@ -55,7 +56,7 @@ class Report {
         materials = materials ?? <String>[],
         findingTags = findingTags ?? <String>[],
         actions = actions ?? <String>[],
-        photos = photos ?? <PhotoItem>[];
+        photoGroups = photoGroups ?? <PhotoGroup>[];
 
   final String id;
   final DateTime createdAt;
@@ -106,7 +107,9 @@ class Report {
   String findings;
 
   List<String> actions;
-  List<PhotoItem> photos;
+
+  /// Les photos, rangees par lot : un lot par point de l'intervention.
+  List<PhotoGroup> photoGroups;
 
   // --- Conclusions ----------------------------------------------------------
   ReportStatus status;
@@ -155,8 +158,20 @@ class Report {
       .where((part) => part.trim().isNotEmpty)
       .join(', ');
 
+  /// Toutes les photos du rapport, lot par lot et dans l'ordre.
+  ///
+  /// Non modifiable : une photo s'ajoute ou se retire dans son lot. Y écrire
+  /// directement ne toucherait qu'une copie, sans que rien ne le signale.
+  List<PhotoItem> get photos => List.unmodifiable(
+        [for (final group in photoGroups) ...group.photos],
+      );
+
   List<PhotoItem> photosOfStage(PhotoStage stage) =>
       photos.where((photo) => photo.stage == stage).toList();
+
+  /// Les lots qui contiennent au moins une photo.
+  List<PhotoGroup> get filledPhotoGroups =>
+      photoGroups.where((group) => !group.isEmpty).toList();
 
   /// Sections encore vides, affichees comme rappel avant de generer le PDF.
   List<String> get missingSections {
@@ -210,7 +225,7 @@ class Report {
         'findingTags': findingTags,
         'findings': findings,
         'actions': actions,
-        'photos': photos.map((photo) => photo.toJson()).toList(),
+        'photoGroups': photoGroups.map((group) => group.toJson()).toList(),
         'status': status.name,
         'conclusions': conclusions,
         'remainingPoints': remainingPoints,
@@ -227,6 +242,22 @@ class Report {
         (json[key] as List<dynamic>? ?? const <dynamic>[])
             .map((e) => e.toString())
             .toList();
+
+    // Les rapports enregistres avant les lots rangeaient leurs photos a plat :
+    // on les regroupe en un lot unique plutot que de les perdre.
+    final photoGroups = json.containsKey('photoGroups')
+        ? (json['photoGroups'] as List<dynamic>? ?? const <dynamic>[])
+            .map((e) => PhotoGroup.fromJson(e as Map<String, dynamic>))
+            .toList()
+        : <PhotoGroup>[
+            for (final legacy in <List<PhotoItem>>[
+              (json['photos'] as List<dynamic>? ?? const <dynamic>[])
+                  .map((e) => PhotoItem.fromJson(e as Map<String, dynamic>))
+                  .toList(),
+            ])
+              if (legacy.isNotEmpty)
+                PhotoGroup(id: '${json['id']}-lot-1', photos: legacy),
+          ];
 
     // Les rapports enregistres avant la saisie de plusieurs intervenants
     // portaient un seul nom : on le relit pour ne perdre aucun rapport deja
@@ -273,9 +304,7 @@ class Report {
       findingTags: strings('findingTags'),
       findings: json['findings'] as String? ?? '',
       actions: strings('actions'),
-      photos: (json['photos'] as List<dynamic>? ?? const <dynamic>[])
-          .map((e) => PhotoItem.fromJson(e as Map<String, dynamic>))
-          .toList(),
+      photoGroups: photoGroups,
       status: ReportStatus.fromName(json['status'] as String?),
       conclusions: json['conclusions'] as String? ?? '',
       remainingPoints: json['remainingPoints'] as String? ?? '',

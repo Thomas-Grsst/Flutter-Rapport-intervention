@@ -1,6 +1,7 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:rapport_intervention/models/company.dart';
 import 'package:rapport_intervention/models/enums.dart';
+import 'package:rapport_intervention/models/photo_group.dart';
 import 'package:rapport_intervention/models/photo_item.dart';
 import 'package:rapport_intervention/models/report.dart';
 
@@ -20,9 +21,11 @@ Report _sample() => Report(
       actions: ['Pompage de la fosse'],
       conclusions: "La conformité de l'intervention est attestée.",
       status: ReportStatus.termine,
-      photos: [
-        PhotoItem(id: 'p1', filePath: '/tmp/a.jpg', stage: PhotoStage.avant),
-        PhotoItem(id: 'p2', filePath: '/tmp/b.jpg', stage: PhotoStage.apres),
+      photoGroups: [
+        PhotoGroup(id: 'lot1', label: 'Poste de relevage', photos: [
+          PhotoItem(id: 'p1', filePath: '/tmp/a.jpg', stage: PhotoStage.avant),
+          PhotoItem(id: 'p2', filePath: '/tmp/b.jpg', stage: PhotoStage.apres),
+        ]),
       ],
     );
 
@@ -35,6 +38,8 @@ void main() {
       expect(restored.id, original.id);
       expect(restored.reportNumber, original.reportNumber);
       expect(restored.status, ReportStatus.termine);
+      expect(restored.photoGroups, hasLength(1));
+      expect(restored.photoGroups.single.label, 'Poste de relevage');
       expect(restored.photos.length, 2);
       expect(restored.photos.first.stage, PhotoStage.avant);
       expect(restored.actions, ['Pompage de la fosse']);
@@ -44,7 +49,7 @@ void main() {
       final original = _sample();
       final copy = original.clone();
       copy.clientName = 'Autre client';
-      copy.photos.clear();
+      copy.photoGroups.clear();
 
       expect(original.clientName, 'M. Manuel BLANC');
       expect(original.photos.length, 2);
@@ -111,6 +116,55 @@ void main() {
       expect(report.isMultiDay, isTrue);
       expect(Report.fromJson(report.toJson()).interventionEndDate,
           DateTime(2026, 3, 14));
+    });
+
+    test('relit un rapport enregistré avant les lots de photos', () {
+      // Les photos étaient rangées à plat : elles doivent se retrouver dans
+      // un lot unique plutôt que disparaître.
+      final ancien = {
+        ..._sample().toJson(),
+        'photos': [
+          PhotoItem(id: 'p1', filePath: '/tmp/a.jpg', stage: PhotoStage.avant)
+              .toJson(),
+          PhotoItem(id: 'p2', filePath: '/tmp/b.jpg', stage: PhotoStage.apres)
+              .toJson(),
+        ],
+      }..remove('photoGroups');
+
+      final report = Report.fromJson(ancien);
+
+      expect(report.photoGroups, hasLength(1));
+      expect(report.photos, hasLength(2));
+      expect(report.photos.first.filePath, '/tmp/a.jpg');
+    });
+
+    test('range les photos par lot, chacun avec ses moments', () {
+      final report = _sample();
+      report.photoGroups.add(
+        PhotoGroup(id: 'lot2', label: 'WC', photos: [
+          PhotoItem(id: 'p3', filePath: '/tmp/c.jpg', stage: PhotoStage.avant),
+          PhotoItem(
+              id: 'p4', filePath: '/tmp/d.jpg', stage: PhotoStage.pendant),
+        ]),
+      );
+
+      expect(report.photos, hasLength(4));
+      expect(report.filledPhotoGroups, hasLength(2));
+      expect(report.photoGroups.last.ofStage(PhotoStage.avant), hasLength(1));
+      expect(report.photoGroups.last.ofStage(PhotoStage.apres), isEmpty);
+      // Un lot vide ne part pas au rapport.
+      report.photoGroups.add(PhotoGroup(id: 'lot3'));
+      expect(report.filledPhotoGroups, hasLength(2));
+    });
+
+    test('la liste des photos ne se modifie pas directement', () {
+      // Y écrire ne toucherait qu'une copie : mieux vaut que cela casse.
+      expect(
+        () => _sample().photos.add(
+              PhotoItem(id: 'x', filePath: '/tmp/x.jpg'),
+            ),
+        throwsUnsupportedError,
+      );
     });
 
     test('regroupe les photos par moment de prise de vue', () {

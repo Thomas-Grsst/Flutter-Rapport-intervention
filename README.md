@@ -21,7 +21,7 @@ courtes, réparties en sept étapes.
 | 2. Observations | Contexte de l'intervention et contraintes d'accès |
 | 3. Matériel | Cases à cocher (camion hydrocureur, tuyaux, caméra…) |
 | 4. Constats et actions | Constats cochés + précisions libres, actions cochées |
-| 5. Photos | Avant / pendant / après, avec légende |
+| 5. Photos | Un lot par point de l'intervention, avec son avant / pendant / après |
 | 6. Conclusion | Statut, conclusion, points restants, horaires |
 | 7. Validation | Évaluation du client et signatures tactiles |
 
@@ -38,10 +38,15 @@ du pied de page et de la pagination.
   rapports suivants.
 - **Proposition de conclusion** composée à partir du type d'intervention, des
   constats et des actions. Le texte reste entièrement modifiable.
-- **Photos** prises depuis l'appareil ou choisies dans la galerie, classées en
-  avant / pendant / après, redimensionnées à l'import pour que le PDF reste
+- **Photos par lot** : un lot par point de l'intervention (le poste, puis les
+  WC), chacun avec sa case avant, pendant et après — n'importe laquelle peut
+  rester vide. Le rapport imprime chaque lot sur sa ligne, colonnes alignées,
+  si bien qu'un « après » tombe toujours en face de l'« avant » auquel il
+  répond. Les photos sont redimensionnées à l'import pour que le PDF reste
   envoyable en 4G.
-- **Signatures tactiles** de l'intervenant et du client.
+- **Cachet et signatures** : le rapport se termine par le cachet de
+  l'entreprise, composé à partir de sa fiche, avec la signature de
+  l'intervenant par-dessus — plus la signature du client.
 - **Plusieurs intervenants** par rapport : on coche ceux qui étaient sur le
   chantier, et on ajoute un renfort au passage s'il n'est pas dans la liste.
 - **Interventions sur plusieurs jours** : une date de fin facultative, imprimée
@@ -118,7 +123,7 @@ lib/
 ├── main.dart                  Point d'entrée, injection des dépendances
 ├── app.dart                   MaterialApp, chargement initial
 ├── theme.dart                 Charte graphique (bleu #104C7E / #8FB8E8)
-├── models/                    Report, PhotoItem, Company, AppSettings
+├── models/                    Report, PhotoGroup, PhotoItem, Company, AppSettings
 ├── services/
 │   ├── storage_service.dart      Interface de stockage
 │   ├── storage_service_io.dart   Fichiers, sur téléphone

@@ -117,13 +117,18 @@ void main() {
         ..reportNumber = 'ASE-120326-MB'
         ..status = ReportStatus.termine
         ..clientSignaturePath = 'media/signature_client_0.png'
-        ..photos.add(provider.buildPhoto('media/avant_0.jpg', PhotoStage.avant));
+        ..photoGroups.add(
+          provider.buildPhotoGroup()
+            ..photos.add(provider.buildPhoto('media/avant_0.jpg',
+                PhotoStage.avant)),
+        );
       await provider.save(source);
 
       final copy = provider.duplicate(source);
 
       expect(copy.id, isNot(source.id));
       expect(copy.clientName, 'M. Manuel BLANC');
+      expect(copy.photoGroups, isEmpty);
       expect(copy.photos, isEmpty);
       expect(copy.clientSignaturePath, isNull);
       expect(copy.reportNumber, isEmpty);
@@ -137,7 +142,10 @@ void main() {
 
       final photoPath = await storage.importMedia('source.jpg');
       final report = _report(provider, clientName: 'M. Manuel BLANC')
-        ..photos.add(provider.buildPhoto(photoPath, PhotoStage.avant));
+        ..photoGroups.add(
+          provider.buildPhotoGroup()
+            ..photos.add(provider.buildPhoto(photoPath, PhotoStage.avant)),
+        );
       await provider.save(report);
 
       await provider.delete(report);
