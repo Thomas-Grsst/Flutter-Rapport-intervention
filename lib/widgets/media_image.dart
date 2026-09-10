@@ -18,6 +18,7 @@ class MediaImage extends StatefulWidget {
     required this.path,
     this.fit = BoxFit.cover,
     this.placeholder,
+    this.fallbackAsset,
   });
 
   final String? path;
@@ -25,6 +26,10 @@ class MediaImage extends StatefulWidget {
 
   /// Affiche a la place de l'image quand le media est absent ou illisible.
   final Widget? placeholder;
+
+  /// Image livree avec l'application, affichee quand [path] est vide.
+  /// Sert au logo par defaut, avant que l'utilisateur en choisisse un.
+  final String? fallbackAsset;
 
   @override
   State<MediaImage> createState() => _MediaImageState();
@@ -56,6 +61,10 @@ class _MediaImageState extends State<MediaImage> {
           // quelques millisecondes, un spinner ne ferait que clignoter.
           if (snapshot.connectionState != ConnectionState.done) {
             return Container(color: AppColors.paleBlue);
+          }
+          final fallback = widget.fallbackAsset;
+          if (fallback != null) {
+            return Image.asset(fallback, fit: widget.fit);
           }
           return widget.placeholder ??
               Container(

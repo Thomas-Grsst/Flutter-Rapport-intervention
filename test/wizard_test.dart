@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:provider/provider.dart';
+import 'package:rapport_intervention/models/app_settings.dart';
 import 'package:rapport_intervention/models/enums.dart';
 import 'package:rapport_intervention/screens/report_wizard_screen.dart';
 import 'package:rapport_intervention/services/pdf_service.dart';
@@ -134,6 +135,41 @@ void main() {
     expect(conclusions, contains('entretien poste de relevage'));
     expect(conclusions, contains('canalisation bouchée'));
     expect(conclusions, contains('pompage de la fosse'));
+  });
+
+  testWidgets('on peut cocher et décocher les intervenants', (tester) async {
+    final reports = await _pumpWizard(tester, storage: FakeStorage());
+
+    // L'intervenant enregistré dans les réglages est coché d'avance.
+    await _tap(tester, find.text('Thierry GROSSAT'));
+    await _next(tester);
+    expect(reports.all.single.technicians, isEmpty);
+
+    await tester.tap(find.text('Précédent'));
+    await tester.pumpAndSettle();
+    await _tap(tester, find.text('Thierry GROSSAT'));
+    await _next(tester);
+
+    expect(reports.all.single.techniciansLine, 'Thierry GROSSAT');
+  });
+
+  testWidgets('une intervention peut s\'étaler sur plusieurs jours',
+      (tester) async {
+    final reports = await _pumpWizard(tester, storage: FakeStorage());
+
+    await _tap(tester, find.text("L'intervention a duré plusieurs jours"));
+
+    // Le calendrier s'ouvre sur le premier jour : on valide deux jours plus
+    // tard pour obtenir une vraie plage.
+    final start = reports.createDraft(AppSettings.defaults).interventionDate;
+    final end = start.add(const Duration(days: 2));
+    await _tap(tester, find.text('${end.day}').last);
+    await _tap(tester, find.text('OK'));
+    await _next(tester);
+
+    final saved = reports.all.single;
+    expect(saved.isMultiDay, isTrue);
+    expect(saved.interventionEndDate!.day, end.day);
   });
 
   testWidgets('la dernière étape liste ce qui reste à compléter',

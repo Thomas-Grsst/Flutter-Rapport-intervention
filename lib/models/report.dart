@@ -1,3 +1,4 @@
+import 'company.dart';
 import 'enums.dart';
 import 'photo_item.dart';
 
@@ -19,6 +20,7 @@ class Report {
     this.reference = '',
     this.interventionType = '',
     DateTime? interventionDate,
+    this.interventionEndDate,
     this.startTime = '',
     this.endTime = '',
     this.clientName = '',
@@ -30,8 +32,7 @@ class Report {
     this.siteCity = '',
     this.siteLocation = '',
     this.siteContact = '',
-    this.technicianName = '',
-    this.technicianPhone = '',
+    List<Technician>? technicians,
     this.observations = '',
     this.accessConstraints = '',
     List<String>? materials,
@@ -50,6 +51,7 @@ class Report {
     this.technicianSignaturePath,
     this.lastPdfPath,
   })  : interventionDate = interventionDate ?? DateTime.now(),
+        technicians = technicians ?? <Technician>[],
         materials = materials ?? <String>[],
         findingTags = findingTags ?? <String>[],
         actions = actions ?? <String>[],
@@ -64,6 +66,11 @@ class Report {
   String reference;
   String interventionType;
   DateTime interventionDate;
+
+  /// Dernier jour, quand l'intervention s'etale sur plusieurs jours.
+  /// Null pour une intervention d'une seule journee, le cas courant.
+  DateTime? interventionEndDate;
+
   String startTime;
   String endTime;
 
@@ -80,9 +87,11 @@ class Report {
   String siteLocation;
   String siteContact;
 
-  // --- Intervenant ----------------------------------------------------------
-  String technicianName;
-  String technicianPhone;
+  // --- Intervenants ---------------------------------------------------------
+
+  /// Les personnes intervenues sur le chantier. Une intervention se fait
+  /// souvent a deux, et le rapport doit toutes les nommer.
+  List<Technician> technicians;
 
   // --- Contenu du rapport ---------------------------------------------------
   String observations;
@@ -123,6 +132,20 @@ class Report {
   String get displayClient =>
       clientName.trim().isNotEmpty ? clientName.trim() : 'Client non renseigne';
 
+  /// "Thierry GROSSAT et Marc DUPONT"
+  String get techniciansLine {
+    final names = technicians
+        .map((technician) => technician.name.trim())
+        .where((name) => name.isNotEmpty)
+        .toList();
+    if (names.length <= 1) return names.join();
+    return '${names.sublist(0, names.length - 1).join(', ')} et ${names.last}';
+  }
+
+  bool get isMultiDay =>
+      interventionEndDate != null &&
+      !_isSameDay(interventionEndDate!, interventionDate);
+
   String get clientCityLine => _cityLine(clientPostalCode, clientCity);
 
   String get siteCityLine => _cityLine(sitePostalCode, siteCity);
@@ -141,7 +164,7 @@ class Report {
     if (clientName.trim().isEmpty) missing.add('Nom du client');
     if (siteAddressLine.trim().isEmpty) missing.add("Adresse d'intervention");
     if (interventionType.trim().isEmpty) missing.add("Type d'intervention");
-    if (technicianName.trim().isEmpty) missing.add('Intervenant');
+    if (techniciansLine.isEmpty) missing.add('Intervenant');
     if (findings.trim().isEmpty && findingTags.isEmpty && actions.isEmpty) {
       missing.add('Constats et actions');
     }
@@ -154,6 +177,9 @@ class Report {
   static String _cityLine(String postalCode, String city) =>
       [postalCode, city].where((part) => part.trim().isNotEmpty).join(' ');
 
+  static bool _isSameDay(DateTime a, DateTime b) =>
+      a.year == b.year && a.month == b.month && a.day == b.day;
+
   // --- Serialisation --------------------------------------------------------
 
   Map<String, dynamic> toJson() => {
@@ -164,6 +190,7 @@ class Report {
         'reference': reference,
         'interventionType': interventionType,
         'interventionDate': interventionDate.toIso8601String(),
+        'interventionEndDate': interventionEndDate?.toIso8601String(),
         'startTime': startTime,
         'endTime': endTime,
         'clientName': clientName,
@@ -175,8 +202,7 @@ class Report {
         'siteCity': siteCity,
         'siteLocation': siteLocation,
         'siteContact': siteContact,
-        'technicianName': technicianName,
-        'technicianPhone': technicianPhone,
+        'technicians': technicians.map((t) => t.toJson()).toList(),
         'observations': observations,
         'accessConstraints': accessConstraints,
         'materials': materials,
@@ -202,6 +228,21 @@ class Report {
             .map((e) => e.toString())
             .toList();
 
+    // Les rapports enregistres avant la saisie de plusieurs intervenants
+    // portaient un seul nom : on le relit pour ne perdre aucun rapport deja
+    // sur le telephone.
+    final technicians = json.containsKey('technicians')
+        ? (json['technicians'] as List<dynamic>? ?? const <dynamic>[])
+            .map((e) => Technician.fromJson(e as Map<String, dynamic>))
+            .toList()
+        : <Technician>[
+            if ((json['technicianName'] as String? ?? '').trim().isNotEmpty)
+              Technician(
+                name: json['technicianName'] as String,
+                phone: json['technicianPhone'] as String? ?? '',
+              ),
+          ];
+
     return Report(
       id: json['id'] as String,
       createdAt: DateTime.parse(json['createdAt'] as String),
@@ -210,6 +251,9 @@ class Report {
       reference: json['reference'] as String? ?? '',
       interventionType: json['interventionType'] as String? ?? '',
       interventionDate: DateTime.parse(json['interventionDate'] as String),
+      interventionEndDate: json['interventionEndDate'] == null
+          ? null
+          : DateTime.parse(json['interventionEndDate'] as String),
       startTime: json['startTime'] as String? ?? '',
       endTime: json['endTime'] as String? ?? '',
       clientName: json['clientName'] as String? ?? '',
@@ -221,8 +265,7 @@ class Report {
       siteCity: json['siteCity'] as String? ?? '',
       siteLocation: json['siteLocation'] as String? ?? '',
       siteContact: json['siteContact'] as String? ?? '',
-      technicianName: json['technicianName'] as String? ?? '',
-      technicianPhone: json['technicianPhone'] as String? ?? '',
+      technicians: technicians,
       observations: json['observations'] as String? ?? '',
       accessConstraints: json['accessConstraints'] as String? ?? '',
       materials: strings('materials'),

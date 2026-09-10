@@ -68,7 +68,7 @@ class ReportsProvider extends ChangeNotifier {
         report.siteOneLine,
         report.siteLocation,
         report.reportNumber,
-        report.technicianName,
+        report.techniciansLine,
       ].join(' '));
       return haystack.contains(normalized);
     }).toList();
@@ -121,8 +121,7 @@ class ReportsProvider extends ChangeNotifier {
       createdAt: now,
       updatedAt: now,
       interventionDate: now,
-      technicianName: technician?.name ?? '',
-      technicianPhone: technician?.phone ?? '',
+      technicians: [if (technician != null) technician],
       documentsToTransmit: "Rapport d'intervention",
       status: ReportStatus.brouillon,
     );

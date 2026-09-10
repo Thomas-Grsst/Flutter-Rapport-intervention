@@ -57,6 +57,7 @@ flutter:
   # Roboto — Apache License 2.0, voir assets/fonts/LICENSE.txt
   assets:
     - assets/fonts/
-
-  # Le logo de l'entreprise est choisi par l'utilisateur dans les réglages et
-  # stocké sur l'appareil : l'application n'embarque aucun visuel en dur.
+    # Logo affiché tant que l'utilisateur n'en a pas choisi un dans les
+    # réglages, pour que les rapports sortent en-tête complète dès la
+    # première ouverture.
+    - assets/images/

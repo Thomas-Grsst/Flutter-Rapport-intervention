@@ -43,6 +43,11 @@ class AppSettings {
           city: 'TREVOUX',
           phone: '06 50 36 50 00',
           email: 'contact@auservicedeleau.fr',
+          siret: '91345781800015',
+          ape: '3700Z',
+          rcs: 'BOURG EN BRESSE B 913 457 818',
+          vatNumber: 'FR82913457818',
+          capital: '2 000,00 €',
         ),
         technicians: <Technician>[
           Technician(name: 'Thierry GROSSAT', phone: '06 50 36 50 00'),

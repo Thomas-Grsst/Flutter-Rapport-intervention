@@ -40,9 +40,7 @@ class _SignatureStepState extends State<SignatureStep> {
         fullscreenDialog: true,
         builder: (_) => _SignaturePadPage(
           title: isClient ? 'Signature du client' : "Signature de l'intervenant",
-          subtitle: isClient
-              ? _draft.clientName
-              : _draft.technicianName,
+          subtitle: isClient ? _draft.clientName : _draft.techniciansLine,
         ),
       ),
     );

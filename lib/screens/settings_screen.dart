@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 
 import '../models/app_settings.dart';
 import '../models/company.dart';
+import '../services/pdf_service.dart';
 import '../state/settings_provider.dart';
 import '../theme.dart';
 import '../widgets/app_text_field.dart';
@@ -144,6 +145,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
           children: [
             _companyCard(),
             const SizedBox(height: 12),
+            _legalCard(),
+            const SizedBox(height: 12),
             _logoCard(),
             const SizedBox(height: 12),
             _techniciansCard(),
@@ -255,6 +258,89 @@ class _SettingsScreenState extends State<SettingsScreen> {
     );
   }
 
+  /// Mentions légales imprimées en pied de chaque page du rapport.
+  Widget _legalCard() {
+    return SectionCard(
+      title: 'Mentions légales',
+      icon: Icons.gavel_outlined,
+      children: [
+        const Text(
+          'Elles apparaissent en pied de chaque page du rapport.',
+          style: TextStyle(fontSize: 13, color: Color(0xFF6B7785)),
+        ),
+        const SizedBox(height: 12),
+        AppTextField(
+          initialValue: _company.siret,
+          label: 'SIRET',
+          hint: 'Ex. : 91345781800015',
+          keyboardType: TextInputType.number,
+          onChanged: (value) => _updateCompany((c) => c.copyWith(siret: value)),
+        ),
+        const SizedBox(height: 10),
+        AppTextField(
+          initialValue: _company.ape,
+          label: 'Code APE',
+          hint: 'Ex. : 3700Z',
+          textCapitalization: TextCapitalization.characters,
+          onChanged: (value) => _updateCompany((c) => c.copyWith(ape: value)),
+        ),
+        const SizedBox(height: 10),
+        AppTextField(
+          initialValue: _company.rcs,
+          label: 'RCS',
+          hint: 'Ex. : BOURG EN BRESSE B 913 457 818',
+          textCapitalization: TextCapitalization.characters,
+          onChanged: (value) => _updateCompany((c) => c.copyWith(rcs: value)),
+        ),
+        const SizedBox(height: 10),
+        AppTextField(
+          initialValue: _company.vatNumber,
+          label: 'N° TVA intracommunautaire',
+          hint: 'Ex. : FR82913457818',
+          textCapitalization: TextCapitalization.characters,
+          onChanged: (value) =>
+              _updateCompany((c) => c.copyWith(vatNumber: value)),
+        ),
+        const SizedBox(height: 10),
+        AppTextField(
+          initialValue: _company.capital,
+          label: 'Capital social',
+          hint: 'Ex. : 2 000,00 €',
+          onChanged: (value) =>
+              _updateCompany((c) => c.copyWith(capital: value)),
+        ),
+        const SizedBox(height: 12),
+        Container(
+          width: double.infinity,
+          padding: const EdgeInsets.all(12),
+          decoration: BoxDecoration(
+            color: AppColors.paleBlue,
+            borderRadius: BorderRadius.circular(10),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text(
+                'En pied de page',
+                style: TextStyle(
+                  fontSize: 11.5,
+                  fontWeight: FontWeight.w700,
+                  letterSpacing: 0.5,
+                  color: AppColors.brandDark,
+                ),
+              ),
+              const SizedBox(height: 6),
+              Text(
+                _company.legalLine,
+                style: const TextStyle(fontSize: 12, height: 1.4),
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+
   Widget _logoCard() {
     final path = _company.logoPath;
     final hasLogo = path != null && path.isNotEmpty;
@@ -274,10 +360,11 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 borderRadius: BorderRadius.circular(10),
               ),
               padding: const EdgeInsets.all(6),
-              child: hasLogo
-                  ? MediaImage(path: path, fit: BoxFit.contain)
-                  : const Icon(Icons.image_outlined,
-                      color: AppColors.brandLight, size: 30),
+              child: MediaImage(
+                path: path,
+                fit: BoxFit.contain,
+                fallbackAsset: PdfService.defaultLogoAsset,
+              ),
             ),
             const SizedBox(width: 16),
             Expanded(
@@ -294,7 +381,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     children: [
                       TextButton(
                         onPressed: _pickLogo,
-                        child: Text(hasLogo ? 'Changer' : 'Ajouter'),
+                        child: Text(hasLogo ? 'Changer' : 'Remplacer'),
                       ),
                       if (hasLogo)
                         TextButton(

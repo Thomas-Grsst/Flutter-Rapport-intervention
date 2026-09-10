@@ -12,6 +12,11 @@ class Company {
     this.city = '',
     this.phone = '',
     this.email = '',
+    this.siret = '',
+    this.ape = '',
+    this.rcs = '',
+    this.vatNumber = '',
+    this.capital = '',
     this.logoPath,
   });
 
@@ -23,7 +28,22 @@ class Company {
   final String phone;
   final String email;
 
+  // --- Mentions legales -----------------------------------------------------
+  //
+  // Imprimees en pied de chaque page du rapport, comme sur le modele papier.
+
+  final String siret;
+  final String ape;
+  final String rcs;
+  final String vatNumber;
+
+  /// Capital social, ex. "2 000,00 €".
+  final String capital;
+
   /// Chemin local du logo (copie dans le dossier de l'application).
+  ///
+  /// Null tant que l'utilisateur n'en a pas choisi un : le logo livre avec
+  /// l'application sert alors de valeur par defaut.
   final String? logoPath;
 
   /// "SASU AU SERVICE DE L'EAU"
@@ -38,15 +58,39 @@ class Company {
   String get addressOneLine =>
       [addressLine, cityLine].where((part) => part.trim().isNotEmpty).join(' - ');
 
-  /// Ligne affichee en pied de chaque page du PDF.
-  String get footerLine {
+  /// Coordonnees de l'entreprise, sur une ligne.
+  String get contactLine {
     final parts = <String>[
       if (displayName.isNotEmpty) displayName,
       if (addressOneLine.isNotEmpty) addressOneLine,
-      if (phone.isNotEmpty) 'Tel. : $phone',
+      if (phone.isNotEmpty) 'Tél. : $phone',
       if (email.isNotEmpty) 'Mail : $email',
     ];
     return parts.join('  -  ');
+  }
+
+  /// Coordonnees de l'en-tete du rapport, une information par ligne.
+  List<String> get contactLines => <String>[
+        if (addressOneLine.isNotEmpty) addressOneLine,
+        if (phone.isNotEmpty) 'Tél. : $phone',
+        if (email.isNotEmpty) 'Mail : $email',
+      ];
+
+  /// Mentions legales imprimees en pied de chaque page.
+  ///
+  /// Retombe sur les coordonnees tant qu'aucune mention n'est renseignee :
+  /// un pied de page vide ferait plus mauvais effet qu'une adresse repetee.
+  String get legalLine {
+    final parts = <String>[
+      if (displayName.isNotEmpty) displayName,
+      if (siret.trim().isNotEmpty) 'SIRET : ${siret.trim()}',
+      if (ape.trim().isNotEmpty) 'APE : ${ape.trim()}',
+      if (rcs.trim().isNotEmpty) 'RCS ${rcs.trim()}',
+      if (vatNumber.trim().isNotEmpty)
+        'N° TVA intracom : ${vatNumber.trim()}',
+      if (capital.trim().isNotEmpty) 'Capital : ${capital.trim()}',
+    ];
+    return parts.length <= 1 ? contactLine : parts.join(' - ');
   }
 
   bool get isEmpty => name.trim().isEmpty;
@@ -59,6 +103,11 @@ class Company {
     String? city,
     String? phone,
     String? email,
+    String? siret,
+    String? ape,
+    String? rcs,
+    String? vatNumber,
+    String? capital,
     String? logoPath,
     bool clearLogo = false,
   }) {
@@ -70,6 +119,11 @@ class Company {
       city: city ?? this.city,
       phone: phone ?? this.phone,
       email: email ?? this.email,
+      siret: siret ?? this.siret,
+      ape: ape ?? this.ape,
+      rcs: rcs ?? this.rcs,
+      vatNumber: vatNumber ?? this.vatNumber,
+      capital: capital ?? this.capital,
       logoPath: clearLogo ? null : (logoPath ?? this.logoPath),
     );
   }
@@ -82,6 +136,11 @@ class Company {
         'city': city,
         'phone': phone,
         'email': email,
+        'siret': siret,
+        'ape': ape,
+        'rcs': rcs,
+        'vatNumber': vatNumber,
+        'capital': capital,
         'logoPath': logoPath,
       };
 
@@ -94,6 +153,11 @@ class Company {
       city: json['city'] as String? ?? '',
       phone: json['phone'] as String? ?? '',
       email: json['email'] as String? ?? '',
+      siret: json['siret'] as String? ?? '',
+      ape: json['ape'] as String? ?? '',
+      rcs: json['rcs'] as String? ?? '',
+      vatNumber: json['vatNumber'] as String? ?? '',
+      capital: json['capital'] as String? ?? '',
       logoPath: json['logoPath'] as String?,
     );
   }

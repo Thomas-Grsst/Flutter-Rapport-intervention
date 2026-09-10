@@ -17,7 +17,7 @@ courtes, réparties en sept étapes.
 
 | Étape | Ce qu'on demande |
 |---|---|
-| 1. Le chantier | Client, adresse d'intervention, localisation, type d'intervention, date, intervenant |
+| 1. Le chantier | Client, adresse d'intervention, localisation, type d'intervention, dates, intervenants |
 | 2. Observations | Contexte de l'intervention et contraintes d'accès |
 | 3. Matériel | Cases à cocher (camion hydrocureur, tuyaux, caméra…) |
 | 4. Constats et actions | Constats cochés + précisions libres, actions cochées |
@@ -42,13 +42,21 @@ du pied de page et de la pagination.
   avant / pendant / après, redimensionnées à l'import pour que le PDF reste
   envoyable en 4G.
 - **Signatures tactiles** de l'intervenant et du client.
+- **Plusieurs intervenants** par rapport : on coche ceux qui étaient sur le
+  chantier, et on ajoute un renfort au passage s'il n'est pas dans la liste.
+- **Interventions sur plusieurs jours** : une date de fin facultative, imprimée
+  en « Du … au … » sur le rapport.
+- **En-tête et pied de page** repris du modèle papier : logo et coordonnées de
+  l'entreprise en haut de chaque page, mentions légales (SIRET, APE, RCS, TVA,
+  capital) en bas.
 - **Numérotation automatique** des rapports (`ASE-120326-MB`).
 - **Export PDF** : aperçu, impression, et envoi au client par e-mail, SMS ou
   messagerie.
 - **Recherche et filtres** par client, adresse, numéro de rapport et statut
   (en cours / à suivre / terminés).
-- **Fiche entreprise** (nom, adresse, téléphone, e-mail, logo) et liste des
-  intervenants saisies une seule fois, puis pré-remplies sur chaque rapport.
+- **Fiche entreprise** (nom, adresse, téléphone, e-mail, mentions légales,
+  logo) et liste des intervenants saisies une seule fois, puis pré-remplies sur
+  chaque rapport.
 - **100 % hors ligne** : tout est stocké sur l'appareil, aucun compte ni
   connexion n'est nécessaire sur un chantier. La police du PDF est embarquée,
   rien n'est téléchargé au moment de générer un rapport.
@@ -141,8 +149,12 @@ fichiers atterrissent réellement.
 
 ## Personnalisation
 
-Les valeurs livrées par défaut (entreprise, intervenant, types
-d'intervention, matériel, constats, actions) sont définies dans
+Les valeurs livrées par défaut (entreprise, mentions légales, intervenant,
+types d'intervention, matériel, constats, actions) sont définies dans
 `AppSettings.defaults`, dans [`lib/models/app_settings.dart`](lib/models/app_settings.dart).
 Elles servent de point de départ et sont toutes modifiables depuis l'écran
 Réglages de l'application.
+
+Le logo de `assets/images/logo.png` est celui qui s'imprime tant qu'aucun
+n'a été choisi dans les réglages. En choisir un dans Réglages → Logo le
+remplace, sans toucher au fichier livré.

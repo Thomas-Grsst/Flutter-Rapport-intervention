@@ -11,15 +11,8 @@ import '../models/photo_item.dart';
 import '../models/report.dart';
 import 'storage_service.dart';
 
-/// Génère le PDF du rapport d'intervention.
-///
-/// La mise en page reprend section par section le modèle Word de référence :
-/// page de garde, blocs d'identification, observations, matériel, constats et
-/// actions, photographies, conclusions, points restants, récapitulatif et
-/// évaluation du client. Chaque page porte le bandeau de l'entreprise en
-/// pied de page ainsi que sa pagination.
-/// Un PDF genere : son contenu, son nom de fichier et l'endroit ou il a ete
-/// enregistre.
+/// Un PDF généré : son contenu, son nom de fichier et l'endroit où il a été
+/// enregistré.
 class SavedPdf {
   const SavedPdf({
     required this.path,
@@ -32,6 +25,13 @@ class SavedPdf {
   final Uint8List bytes;
 }
 
+/// Génère le PDF du rapport d'intervention.
+///
+/// La mise en page reprend section par section le modèle Word de référence :
+/// page de garde, blocs d'identification, observations, matériel, constats et
+/// actions, photographies, conclusions, points restants, récapitulatif et
+/// évaluation du client. Chaque page porte le logo et les coordonnées de
+/// l'entreprise en en-tête, ses mentions légales et la pagination en pied.
 class PdfService {
   PdfService(this._storage);
 
@@ -65,6 +65,9 @@ class PdfService {
   /// La police du corps du rapport.
   static const String regularFontAsset = 'assets/fonts/Roboto-Regular.ttf';
 
+  /// Logo utilisé tant qu'aucun n'a été choisi dans les réglages.
+  static const String defaultLogoAsset = 'assets/images/logo.png';
+
   Future<pw.Font> _font(String asset) async =>
       pw.Font.ttf(await rootBundle.load(asset));
 
@@ -72,7 +75,7 @@ class PdfService {
     required Report report,
     required Company company,
   }) async {
-    final logo = await _image(company.logoPath);
+    final logo = await _logo(company);
     final clientSignature = await _image(report.clientSignaturePath);
     final technicianSignature = await _image(report.technicianSignaturePath);
 
@@ -141,6 +144,14 @@ class PdfService {
     return bytes == null ? null : pw.MemoryImage(bytes);
   }
 
+  /// Le logo choisi dans les réglages, sinon celui livré avec l'application.
+  Future<pw.MemoryImage?> _logo(Company company) async {
+    final chosen = await _image(company.logoPath);
+    if (chosen != null) return chosen;
+    final asset = await rootBundle.load(defaultLogoAsset);
+    return pw.MemoryImage(asset.buffer.asUint8List());
+  }
+
   // --- Page de garde --------------------------------------------------------
 
   pw.Page _coverPage({
@@ -201,7 +212,7 @@ class PdfService {
                   ),
                   pw.SizedBox(height: 8),
                   pw.Text(
-                    'Le ${_dayFormat.format(report.interventionDate)}',
+                    _dateLine(report),
                     style: const pw.TextStyle(fontSize: 14, color: textGrey),
                   ),
                   pw.Spacer(),
@@ -216,7 +227,7 @@ class PdfService {
                     ),
                   pw.SizedBox(height: 6),
                   pw.Text(
-                    company.footerLine,
+                    company.contactLine,
                     style: const pw.TextStyle(fontSize: 9.5, color: textGrey),
                   ),
                 ],
@@ -240,8 +251,10 @@ class PdfService {
   }) {
     return pw.MultiPage(
       pageFormat: PdfPageFormat.a4,
-      margin: const pw.EdgeInsets.fromLTRB(45, 40, 45, 55),
-      header: (context) => _pageHeader(report, logo),
+      // Marge basse un peu plus haute : le pied de page porte les
+      // mentions légales sur une ou deux lignes, plus la pagination.
+      margin: const pw.EdgeInsets.fromLTRB(45, 40, 45, 68),
+      header: (context) => _pageHeader(company, logo),
       footer: (context) => _pageFooter(context, company),
       build: (context) => <pw.Widget>[
         ..._identificationBlocks(report, company),
@@ -266,7 +279,9 @@ class PdfService {
     );
   }
 
-  pw.Widget _pageHeader(Report report, pw.MemoryImage? logo) {
+  /// En-tête de chaque page : le logo à gauche, les coordonnées de
+  /// l'entreprise à droite, comme sur le modèle papier.
+  pw.Widget _pageHeader(Company company, pw.MemoryImage? logo) {
     return pw.Container(
       margin: const pw.EdgeInsets.only(bottom: 18),
       padding: const pw.EdgeInsets.only(bottom: 8),
@@ -274,28 +289,35 @@ class PdfService {
         border: pw.Border(bottom: pw.BorderSide(color: brandLight, width: 2)),
       ),
       child: pw.Row(
-        crossAxisAlignment: pw.CrossAxisAlignment.end,
+        crossAxisAlignment: pw.CrossAxisAlignment.start,
         children: [
           if (logo != null)
-            pw.Container(height: 30, width: 60, child: pw.Image(logo, fit: pw.BoxFit.contain))
+            pw.Container(
+              height: 46,
+              width: 90,
+              alignment: pw.Alignment.centerLeft,
+              child: pw.Image(logo, fit: pw.BoxFit.contain),
+            )
           else
-            pw.SizedBox(width: 60),
+            pw.SizedBox(width: 90),
           pw.Spacer(),
           pw.Column(
             crossAxisAlignment: pw.CrossAxisAlignment.end,
             children: [
-              pw.Text(
-                "Rapport d'intervention",
-                style: const pw.TextStyle(
-                  fontSize: 12,
-                  fontWeight: pw.FontWeight.bold,
-                  color: brandDark,
+              if (company.displayName.isNotEmpty)
+                pw.Text(
+                  company.displayName,
+                  style: const pw.TextStyle(
+                    fontSize: 10.5,
+                    fontWeight: pw.FontWeight.bold,
+                    color: brandDark,
+                  ),
                 ),
-              ),
-              pw.Text(
-                '${report.displayTitle} — ${_dayFormat.format(report.interventionDate)}',
-                style: const pw.TextStyle(fontSize: 8.5, color: textGrey),
-              ),
+              for (final line in company.contactLines)
+                pw.Text(
+                  line,
+                  style: const pw.TextStyle(fontSize: 8, color: textGrey),
+                ),
             ],
           ),
         ],
@@ -303,6 +325,11 @@ class PdfService {
     );
   }
 
+  /// Pied de page : les mentions légales de l'entreprise et la pagination.
+  ///
+  /// Les mentions sont centrées sur toute la largeur et la pagination passe
+  /// en dessous : mises côte à côte, une raison sociale un peu longue passait
+  /// à la ligne et le numéro de page se retrouvait au milieu du texte.
   pw.Widget _pageFooter(pw.Context context, Company company) {
     return pw.Container(
       margin: const pw.EdgeInsets.only(top: 12),
@@ -310,17 +337,15 @@ class PdfService {
       decoration: const pw.BoxDecoration(
         border: pw.Border(top: pw.BorderSide(color: lineGrey)),
       ),
-      child: pw.Row(
-        mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
-        crossAxisAlignment: pw.CrossAxisAlignment.start,
+      child: pw.Column(
+        crossAxisAlignment: pw.CrossAxisAlignment.center,
         children: [
-          pw.Expanded(
-            child: pw.Text(
-              company.footerLine,
-              style: const pw.TextStyle(fontSize: 7.5, color: textGrey),
-            ),
+          pw.Text(
+            company.legalLine,
+            textAlign: pw.TextAlign.center,
+            style: const pw.TextStyle(fontSize: 6.5, color: textGrey),
           ),
-          pw.SizedBox(width: 12),
+          pw.SizedBox(height: 3),
           pw.Text(
             '${context.pageNumber} / ${context.pagesCount}',
             style: const pw.TextStyle(fontSize: 7.5, color: textGrey),
@@ -361,9 +386,14 @@ class PdfService {
                 if (company.phone.isNotEmpty) 'Tél. : ${company.phone}',
                 if (company.email.isNotEmpty) 'E-mail : ${company.email}',
                 '',
-                'Intervenant : ${report.technicianName}',
-                if (report.technicianPhone.trim().isNotEmpty)
-                  'Tél. : ${report.technicianPhone}',
+                report.technicians.length > 1
+                    ? 'Intervenants : ${report.techniciansLine}'
+                    : 'Intervenant : ${report.techniciansLine}',
+                for (final technician in report.technicians)
+                  if (technician.phone.trim().isNotEmpty)
+                    report.technicians.length > 1
+                        ? '${technician.name} — ${technician.phone}'
+                        : 'Tél. : ${technician.phone}',
               ],
             ),
           ),
@@ -392,7 +422,9 @@ class PdfService {
                   'N° rapport : ${report.reportNumber}',
                 if (report.reference.trim().isNotEmpty)
                   'V/Réf : ${report.reference}',
-                'Intervention du ${_dayFormat.format(report.interventionDate)}',
+                report.isMultiDay
+                    ? 'Intervention ${_dateLine(report).toLowerCase()}'
+                    : 'Intervention du ${_dayFormat.format(report.interventionDate)}',
                 if (_scheduleLine(report).isNotEmpty) _scheduleLine(report),
               ],
             ),
@@ -443,6 +475,22 @@ class PdfService {
         ],
       ),
     );
+  }
+
+  /// "Le 12/03/2026" ou "Du 12/03/2026 au 14/03/2026".
+  String _dateLine(Report report) {
+    if (!report.isMultiDay) {
+      return 'Le ${_dayFormat.format(report.interventionDate)}';
+    }
+    return 'Du ${_dayFormat.format(report.interventionDate)} '
+        'au ${_dayFormat.format(report.interventionEndDate!)}';
+  }
+
+  /// Les mêmes dates, sans article, pour un tableau ou un libellé.
+  String _dateRange(Report report) {
+    if (!report.isMultiDay) return _dayFormat.format(report.interventionDate);
+    return '${_dayFormat.format(report.interventionDate)} '
+        '— ${_dayFormat.format(report.interventionEndDate!)}';
   }
 
   String _scheduleLine(Report report) {
@@ -780,7 +828,7 @@ class PdfService {
       [
         "Date d'intervention :",
         [
-          _dayFormat.format(report.interventionDate),
+          _dateRange(report),
           if (_scheduleLine(report).isNotEmpty) _scheduleLine(report),
         ].join('   '),
       ],
@@ -848,11 +896,13 @@ class PdfService {
       children: [
         pw.Expanded(
           child: _signatureBox(
-            title: "Signature de l'intervenant",
+            title: report.technicians.length > 1
+                ? 'Signature des intervenants'
+                : "Signature de l'intervenant",
             caption: [
-              report.technicianName,
+              report.techniciansLine,
               company.name,
-              'Le : ${_dayFormat.format(report.interventionDate)}',
+              'Le : ${_dayFormat.format(report.interventionEndDate ?? report.interventionDate)}',
             ].where((line) => line.trim().isNotEmpty).join('\n'),
             signature: technicianSignature,
           ),
@@ -933,7 +983,7 @@ class PdfService {
       ),
       child: pw.Text(
         "Ce document est un rapport d'intervention établi par $name à la suite "
-        "de l'intervention réalisée le ${_dayFormat.format(report.interventionDate)}. "
+        "de l'intervention réalisée ${_dateLine(report).toLowerCase()}. "
         "Toute nouvelle prestation fera l'objet d'un nouvel ordre de service et "
         "d'un nouveau dossier.",
         style: const pw.TextStyle(

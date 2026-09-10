@@ -4,6 +4,7 @@ import 'package:flutter/services.dart' show rootBundle;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:pdf/pdf.dart' show TtfParser;
 import 'package:rapport_intervention/models/app_settings.dart';
+import 'package:rapport_intervention/models/company.dart';
 import 'package:rapport_intervention/models/enums.dart';
 import 'package:rapport_intervention/models/report.dart';
 import 'package:rapport_intervention/services/pdf_service.dart';
@@ -30,8 +31,9 @@ Report _blancReport() => Report(
       siteCity: 'MONTANAY',
       siteLocation: "Cuisine d'été extérieur",
       siteContact: 'M. Manuel BLANC',
-      technicianName: 'Thierry GROSSAT',
-      technicianPhone: '06 50 36 50 00',
+      technicians: const [
+        Technician(name: 'Thierry GROSSAT', phone: '06 50 36 50 00'),
+      ],
       observations: 'Intervention programmée le jeudi matin 12/03/2026 pour '
           "le pompage et l'entretien du poste de relevage.",
       accessConstraints: 'Prévoir 50 à 70 mètres de tuyaux, le poste étant '

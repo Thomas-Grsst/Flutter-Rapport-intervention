@@ -102,36 +102,72 @@ Future<String?> showTextInputDialog(
   String initialValue = '',
   int maxLines = 1,
 }) async {
-  final controller = TextEditingController(text: initialValue);
-
-  final result = await showDialog<String>(
+  return showDialog<String>(
     context: context,
-    builder: (dialogContext) => AlertDialog(
-      title: Text(title),
+    builder: (_) => _TextInputDialog(
+      title: title,
+      hint: hint,
+      initialValue: initialValue,
+      maxLines: maxLines,
+    ),
+  );
+}
+
+/// Contenu de [showTextInputDialog].
+///
+/// La boîte de dialogue est un widget à état pour que le contrôleur de saisie
+/// vive exactement aussi longtemps que le champ qui l'utilise. Le détruire dès
+/// le retour de `showDialog` le libérait trop tôt : la boîte est encore à
+/// l'écran pendant son animation de fermeture, et le champ s'en servait après
+/// coup — ce qui faisait planter l'application juste après « Valider ».
+class _TextInputDialog extends StatefulWidget {
+  const _TextInputDialog({
+    required this.title,
+    required this.hint,
+    required this.initialValue,
+    required this.maxLines,
+  });
+
+  final String title;
+  final String? hint;
+  final String initialValue;
+  final int maxLines;
+
+  @override
+  State<_TextInputDialog> createState() => _TextInputDialogState();
+}
+
+class _TextInputDialogState extends State<_TextInputDialog> {
+  late final TextEditingController _controller =
+      TextEditingController(text: widget.initialValue);
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  void _submit() => Navigator.of(context).pop(_controller.text.trim());
+
+  @override
+  Widget build(BuildContext context) {
+    return AlertDialog(
+      title: Text(widget.title),
       content: TextField(
-        controller: controller,
+        controller: _controller,
         autofocus: true,
-        maxLines: maxLines,
+        maxLines: widget.maxLines,
         textCapitalization: TextCapitalization.sentences,
-        decoration: InputDecoration(hintText: hint),
-        onSubmitted: maxLines == 1
-            ? (value) => Navigator.of(dialogContext).pop(value.trim())
-            : null,
+        decoration: InputDecoration(hintText: widget.hint),
+        onSubmitted: widget.maxLines == 1 ? (_) => _submit() : null,
       ),
       actions: [
         TextButton(
-          onPressed: () => Navigator.of(dialogContext).pop(),
+          onPressed: () => Navigator.of(context).pop(),
           child: const Text('Annuler'),
         ),
-        FilledButton(
-          onPressed: () =>
-              Navigator.of(dialogContext).pop(controller.text.trim()),
-          child: const Text('Valider'),
-        ),
+        FilledButton(onPressed: _submit, child: const Text('Valider')),
       ],
-    ),
-  );
-
-  controller.dispose();
-  return result;
+    );
+  }
 }

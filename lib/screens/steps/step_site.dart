@@ -31,7 +31,6 @@ class _SiteStepState extends State<SiteStep> {
   /// valeur — ce qu'une clé basée sur le texte saisi ferait à chaque frappe,
   /// en faisant perdre le focus.
   int _siteTick = 0;
-  int _technicianTick = 0;
 
   Report get _draft => widget.draft;
 
@@ -63,7 +62,29 @@ class _SiteStepState extends State<SiteStep> {
       helpText: "Date de l'intervention",
     );
     if (picked != null) {
-      _update(() => _draft.interventionDate = picked);
+      _update(() {
+        _draft.interventionDate = picked;
+        // Une date de fin antérieure au nouveau premier jour n'aurait plus
+        // de sens : on la laisse tomber plutôt que d'imprimer l'incohérence.
+        final end = _draft.interventionEndDate;
+        if (end != null && end.isBefore(picked)) {
+          _draft.interventionEndDate = null;
+        }
+      });
+    }
+  }
+
+  Future<void> _pickEndDate() async {
+    final start = _draft.interventionDate;
+    final picked = await showDatePicker(
+      context: context,
+      initialDate: _draft.interventionEndDate ?? start,
+      firstDate: start,
+      lastDate: start.add(const Duration(days: 365)),
+      helpText: "Dernier jour de l'intervention",
+    );
+    if (picked != null) {
+      _update(() => _draft.interventionEndDate = picked);
     }
   }
 
@@ -245,61 +266,168 @@ class _SiteStepState extends State<SiteStep> {
         ),
         QuestionBlock(
           question: "Quand l'intervention a-t-elle eu lieu ?",
-          child: OutlinedButton.icon(
-            onPressed: _pickDate,
-            icon: const Icon(Icons.event_outlined),
-            label: Text(
-              'Le ${_dateFormat.format(_draft.interventionDate)}',
-              style: const TextStyle(fontSize: 16),
-            ),
+          hint: "Sur plusieurs jours, indiquez aussi le dernier jour.",
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              OutlinedButton.icon(
+                onPressed: _pickDate,
+                icon: const Icon(Icons.event_outlined),
+                label: Text(
+                  _draft.isMultiDay
+                      ? 'Du ${_dateFormat.format(_draft.interventionDate)}'
+                      : 'Le ${_dateFormat.format(_draft.interventionDate)}',
+                  style: const TextStyle(fontSize: 16),
+                ),
+              ),
+              if (_draft.interventionEndDate == null)
+                TextButton.icon(
+                  onPressed: _pickEndDate,
+                  icon: const Icon(Icons.date_range_outlined, size: 18),
+                  label: const Text("L'intervention a duré plusieurs jours"),
+                )
+              else
+                Padding(
+                  padding: const EdgeInsets.only(top: 8),
+                  child: Row(
+                    children: [
+                      Expanded(
+                        child: OutlinedButton.icon(
+                          onPressed: _pickEndDate,
+                          icon: const Icon(Icons.event_available_outlined),
+                          label: Text(
+                            'Au ${_dateFormat.format(_draft.interventionEndDate!)}',
+                            style: const TextStyle(fontSize: 16),
+                          ),
+                        ),
+                      ),
+                      IconButton(
+                        tooltip: 'Retirer la date de fin',
+                        icon: const Icon(Icons.close, size: 20),
+                        onPressed: () =>
+                            _update(() => _draft.interventionEndDate = null),
+                      ),
+                    ],
+                  ),
+                ),
+            ],
           ),
         ),
         QuestionBlock(
           question: 'Qui est intervenu ?',
+          hint: 'Cochez tous ceux qui étaient sur le chantier.',
           child: _technicianSelector(settings.technicians),
         ),
       ],
     );
   }
 
-  Widget _technicianSelector(List<Technician> technicians) {
+  // --- Intervenants ---------------------------------------------------------
+
+  bool _isSelected(Technician technician) =>
+      _draft.technicians.any((item) => item.name == technician.name);
+
+  void _toggleTechnician(Technician technician) {
+    _update(() {
+      if (_isSelected(technician)) {
+        _draft.technicians.removeWhere((item) => item.name == technician.name);
+      } else {
+        _draft.technicians.add(technician);
+      }
+    });
+  }
+
+  /// Ajoute quelqu'un qui n'est pas dans les réglages : un intérimaire, un
+  /// renfort ponctuel. Le nom est mémorisé pour les rapports suivants.
+  Future<void> _addTechnician() async {
+    final settings = context.read<SettingsProvider>();
+
+    final name = await showTextInputDialog(
+      context,
+      title: 'Ajouter un intervenant',
+      hint: 'Nom et prénom',
+    );
+    if (name == null || name.isEmpty || !mounted) return;
+
+    final phone = await showTextInputDialog(
+      context,
+      title: 'Téléphone de $name',
+      hint: 'Facultatif',
+    );
+    if (!mounted) return;
+
+    final technician = Technician(name: name, phone: phone ?? '');
+    if (!_isSelected(technician)) {
+      _update(() => _draft.technicians.add(technician));
+    }
+
+    final known = settings.settings.technicians;
+    if (!known.any((item) => item.name == technician.name)) {
+      await settings.update(
+        settings.settings.copyWith(technicians: [...known, technician]),
+      );
+    }
+  }
+
+  Widget _technicianSelector(List<Technician> known) {
+    // Les intervenants ajoutés à la volée s'affichent à la suite de ceux
+    // enregistrés dans les réglages.
+    final extras = _draft.technicians
+        .where((item) => !known.any((k) => k.name == item.name))
+        .toList();
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        if (technicians.isNotEmpty)
-          Wrap(
-            spacing: 8,
-            runSpacing: 8,
-            children: [
-              for (final technician in technicians)
-                ChoiceChip(
-                  label: Text(technician.name),
-                  selected: _draft.technicianName == technician.name,
-                  labelStyle: TextStyle(
-                    fontSize: 13.5,
-                    color: _draft.technicianName == technician.name
-                        ? AppColors.brandDark
-                        : const Color(0xFF35414D),
-                    fontWeight: _draft.technicianName == technician.name
-                        ? FontWeight.w600
-                        : FontWeight.w400,
-                  ),
-                  onSelected: (_) => _update(() {
-                    _draft.technicianName = technician.name;
-                    _draft.technicianPhone = technician.phone;
-                    _technicianTick++;
-                  }),
+        Wrap(
+          spacing: 8,
+          runSpacing: 8,
+          children: [
+            for (final technician in [...known, ...extras])
+              FilterChip(
+                label: Text(technician.name),
+                selected: _isSelected(technician),
+                showCheckmark: true,
+                checkmarkColor: AppColors.brandDark,
+                labelStyle: TextStyle(
+                  fontSize: 13.5,
+                  color: _isSelected(technician)
+                      ? AppColors.brandDark
+                      : const Color(0xFF35414D),
+                  fontWeight: _isSelected(technician)
+                      ? FontWeight.w600
+                      : FontWeight.w400,
                 ),
-            ],
-          ),
-        const SizedBox(height: 10),
-        AppTextField(
-          key: ValueKey('technician-$_technicianTick'),
-          initialValue: _draft.technicianName,
-          hint: "Nom de l'intervenant",
-          prefixIcon: Icons.engineering_outlined,
-          onChanged: (value) => _update(() => _draft.technicianName = value),
+                onSelected: (_) => _toggleTechnician(technician),
+              ),
+            ActionChip(
+              avatar: const Icon(Icons.person_add_alt, size: 18,
+                  color: AppColors.brandDark),
+              // Pas « Autre… » comme les autres listes : une personne
+              // s'ajoute, et l'écran porte déjà un « Autre… » pour le type
+              // d'intervention.
+              label: const Text('Ajouter quelqu\'un'),
+              labelStyle: const TextStyle(
+                fontSize: 13.5,
+                color: AppColors.brandDark,
+                fontWeight: FontWeight.w600,
+              ),
+              onPressed: _addTechnician,
+            ),
+          ],
         ),
+        if (_draft.technicians.length > 1)
+          Padding(
+            padding: const EdgeInsets.only(top: 12),
+            child: Text(
+              'Dans le rapport : ${_draft.techniciansLine}',
+              style: const TextStyle(
+                fontSize: 13,
+                color: AppColors.brandDark,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ),
       ],
     );
   }

@@ -282,7 +282,10 @@ class _ReportDetailScreenState extends State<ReportDetailScreen> {
         ),
         InfoLine(label: 'N° rapport', value: report.reportNumber),
         InfoLine(label: 'V/Réf', value: report.reference),
-        InfoLine(label: 'Intervenant', value: report.technicianName),
+        InfoLine(
+          label: report.technicians.length > 1 ? 'Intervenants' : 'Intervenant',
+          value: report.techniciansLine,
+        ),
         InfoLine(
           label: 'Horaires',
           value: [report.startTime, report.endTime]
