@@ -1,29 +1,28 @@
 import 'dart:convert';
+import 'dart:typed_data';
 
 import 'package:cross_file/cross_file.dart';
-import 'package:flutter/foundation.dart';
 import 'package:path/path.dart' as p;
 import 'package:web/web.dart' as web;
 
+import 'media_store_web.dart';
 import 'storage_service.dart';
 
 /// Stockage utilise quand l'application tourne dans un navigateur.
 ///
 /// L'application vise le telephone, mais pouvoir l'ouvrir dans un navigateur
-/// permet de la faire essayer sans rien installer. Le stockage du navigateur
-/// remplace alors le dossier documents : les rapports et les reglages y sont
-/// enregistres en JSON, les photos et signatures en base64.
+/// permet de la faire essayer sans rien installer. Le navigateur remplace
+/// alors le dossier documents, avec deux emplacements distincts :
 ///
-/// Le stockage local d'un navigateur est limite (quelques megaoctets). Quand
-/// il est plein, les fichiers restent en memoire pour la duree de la session
-/// plutot que de faire echouer la saisie en cours : sur un poste de demo, on
-/// prefere perdre les photos au rechargement que perdre le rapport tout de
-/// suite.
+/// - les fichiers JSON — rapports et reglages — vont dans le stockage local,
+///   simple et synchrone, largement suffisant pour du texte ;
+/// - les photos, signatures, logos et PDF vont dans IndexedDB, parce que le
+///   stockage local plafonne a 5 Mo, soit une vingtaine de photos pour
+///   l'ensemble des rapports.
 class PlatformStorageService implements StorageService {
   static const String _prefix = 'rapport_intervention/';
 
-  /// Fichiers que le stockage du navigateur a refuses, faute de place.
-  final Map<String, Uint8List> _memoryFallback = <String, Uint8List>{};
+  final MediaStoreWeb _media = MediaStoreWeb();
 
   web.Storage get _store => web.window.localStorage;
 
@@ -71,7 +70,10 @@ class PlatformStorageService implements StorageService {
   @override
   Future<void> deleteFileIfExists(String? path) async {
     if (path == null || path.isEmpty) return;
-    _memoryFallback.remove(path);
+    await _media.delete(path);
+    // Les medias enregistres par les versions precedentes vivaient dans le
+    // stockage local : on les retire aussi, sinon ils l'encombreraient pour
+    // toujours.
     _store.removeItem(_key(path));
   }
 
@@ -79,29 +81,24 @@ class PlatformStorageService implements StorageService {
   Future<Uint8List?> readBytes(String? path) async {
     if (path == null || path.isEmpty) return null;
 
-    final fromMemory = _memoryFallback[path];
-    if (fromMemory != null) return fromMemory;
+    final stored = await _media.read(path);
+    if (stored != null) return stored;
 
-    final encoded = _store.getItem(_key(path));
-    if (encoded == null || encoded.isEmpty) return null;
-    return base64Decode(encoded);
+    // Media enregistre par une version precedente, encore dans le stockage
+    // local : on le relit, et on le deplace au passage.
+    final legacy = _store.getItem(_key(path));
+    if (legacy == null || legacy.isEmpty) return null;
+
+    final bytes = base64Decode(legacy);
+    await _media.write(path, bytes);
+    _store.removeItem(_key(path));
+    return bytes;
   }
 
   int _stamp() => DateTime.now().microsecondsSinceEpoch;
 
-  /// Ecrit un fichier binaire et renvoie son chemin. Si le stockage du
-  /// navigateur est plein, le fichier est conserve en memoire pour la session.
-  String _write(String path, Uint8List bytes) {
-    try {
-      _store.setItem(_key(path), base64Encode(bytes));
-      _memoryFallback.remove(path);
-    } catch (error) {
-      _memoryFallback[path] = bytes;
-      debugPrint(
-        'Stockage du navigateur plein : "$path" est conserve en memoire '
-        'jusqu\'au rechargement de la page ($error).',
-      );
-    }
+  Future<String> _write(String path, Uint8List bytes) async {
+    await _media.write(path, bytes);
     return path;
   }
 }

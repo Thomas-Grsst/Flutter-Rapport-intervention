@@ -157,6 +157,20 @@ void main() {
       expect(report.filledPhotoGroups, hasLength(2));
     });
 
+    test('une photo sans moment reste visible dans la colonne « avant »', () {
+      // Les rapports d'avant les lots pouvaient contenir des photos rangées
+      // en « autre ». Sans colonne à elles, elles seraient imprimées sans
+      // apparaître à l'écran : impossibles à corriger ou à retirer.
+      final group = PhotoGroup(id: 'lot1', photos: [
+        PhotoItem(id: 'p1', filePath: '/tmp/a.jpg', stage: PhotoStage.autre),
+        PhotoItem(id: 'p2', filePath: '/tmp/b.jpg', stage: PhotoStage.avant),
+      ]);
+
+      expect(group.inColumn(PhotoStage.avant), hasLength(2));
+      expect(group.inColumn(PhotoStage.pendant), isEmpty);
+      expect(group.ofStage(PhotoStage.avant), hasLength(1));
+    });
+
     test('la liste des photos ne se modifie pas directement', () {
       // Y écrire ne toucherait qu'une copie : mieux vaut que cela casse.
       expect(

@@ -703,13 +703,9 @@ class PdfService {
   }) {
     const stages = [PhotoStage.avant, PhotoStage.pendant, PhotoStage.apres];
 
-    // Les photos qu'aucun moment ne réclame — un import d'une version
-    // précédente — rejoignent la colonne « avant » plutôt que d'être perdues.
-    List<PhotoItem> ofColumn(PhotoStage stage) => group.photos
-        .where((photo) =>
-            images.containsKey(photo.id) &&
-            (photo.stage == stage ||
-                (stage == PhotoStage.avant && photo.stage == PhotoStage.autre)))
+    List<PhotoItem> ofColumn(PhotoStage stage) => group
+        .inColumn(stage)
+        .where((photo) => images.containsKey(photo.id))
         .toList();
 
     final label = group.label.trim();

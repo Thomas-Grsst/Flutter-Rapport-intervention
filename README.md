@@ -105,9 +105,11 @@ le stockage local du navigateur (voir
 [`lib/services/storage_service.dart`](lib/services/storage_service.dart)) ;
 tout le reste — assistant, photos, signatures, PDF — est identique.
 
-Deux limites propres au navigateur : le stockage local est plafonné à quelques
-mégaoctets, et les données restent attachées au navigateur utilisé. Pour un
-usage réel sur le terrain, c'est la version mobile qu'il faut installer.
+Les rapports et les réglages tiennent dans le stockage local, les photos,
+signatures et PDF dans IndexedDB — le stockage local plafonne à 5 Mo, soit une
+vingtaine de photos de téléphone pour l'ensemble des rapports. La limite qui
+reste est que les données appartiennent au navigateur utilisé : pour un usage
+réel sur le terrain, c'est la version mobile qu'il faut installer.
 
 ```bash
 flutter build web --release --no-web-resources-cdn
@@ -128,6 +130,7 @@ lib/
 │   ├── storage_service.dart      Interface de stockage
 │   ├── storage_service_io.dart   Fichiers, sur téléphone
 │   ├── storage_service_web.dart  Stockage du navigateur
+│   ├── media_store_web.dart      Photos du navigateur (IndexedDB)
 │   └── pdf_service.dart          Génération du PDF mis en page
 ├── state/                     ReportsProvider, SettingsProvider
 ├── screens/

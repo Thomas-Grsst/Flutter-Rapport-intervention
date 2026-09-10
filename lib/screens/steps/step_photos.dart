@@ -362,7 +362,7 @@ class _PhotosStepState extends State<PhotosStep> {
   }
 
   Widget _stageColumn(PhotoGroup group, PhotoStage stage, int groupIndex) {
-    final photos = group.ofStage(stage);
+    final photos = group.inColumn(stage);
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,

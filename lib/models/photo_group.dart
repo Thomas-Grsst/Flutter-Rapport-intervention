@@ -30,6 +30,19 @@ class PhotoGroup {
   List<PhotoItem> ofStage(PhotoStage stage) =>
       photos.where((photo) => photo.stage == stage).toList();
 
+  /// Les photos de la colonne [stage], telle que l'ecran de saisie et le
+  /// rapport l'affichent tous les deux.
+  ///
+  /// Un lot n'a que trois colonnes. Les photos sans moment — il en reste dans
+  /// les rapports enregistres avant les lots — rejoignent « avant » : sinon
+  /// elles s'imprimeraient dans le rapport sans apparaitre nulle part a
+  /// l'ecran, impossibles a corriger ou a retirer.
+  List<PhotoItem> inColumn(PhotoStage stage) => photos
+      .where((photo) =>
+          photo.stage == stage ||
+          (stage == PhotoStage.avant && photo.stage == PhotoStage.autre))
+      .toList();
+
   bool get isEmpty => photos.isEmpty;
 
   /// Nombre de photos de l'emplacement le plus rempli : c'est ce qui donne sa

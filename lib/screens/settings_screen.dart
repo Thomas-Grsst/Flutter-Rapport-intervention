@@ -169,6 +169,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
               width: 96,
               child: AppTextField(
                 initialValue: _company.legalForm,
+                label: 'Forme',
                 hint: 'SASU',
                 textCapitalization: TextCapitalization.characters,
                 onChanged: (value) =>
@@ -179,7 +180,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
             Expanded(
               child: AppTextField(
                 initialValue: _company.name,
-                hint: "Nom de l'entreprise",
+                label: "Nom de l'entreprise",
+                hint: 'AU SERVICE DE…',
                 textCapitalization: TextCapitalization.characters,
                 onChanged: (value) =>
                     _updateCompany((c) => c.copyWith(name: value)),
@@ -190,7 +192,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
         const SizedBox(height: 10),
         AppTextField(
           initialValue: _company.addressLine,
-          hint: 'Adresse du siège',
+          label: 'Adresse du siège',
+          hint: 'Ex. : 164, Route de Lyon',
           prefixIcon: Icons.home_outlined,
           onChanged: (value) =>
               _updateCompany((c) => c.copyWith(addressLine: value)),
@@ -202,7 +205,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
               width: 138,
               child: AppTextField(
                 initialValue: _company.postalCode,
-                hint: 'Code postal',
+                label: 'Code postal',
                 keyboardType: TextInputType.number,
                 onChanged: (value) =>
                     _updateCompany((c) => c.copyWith(postalCode: value)),
@@ -212,7 +215,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
             Expanded(
               child: AppTextField(
                 initialValue: _company.city,
-                hint: 'Ville',
+                label: 'Ville',
                 textCapitalization: TextCapitalization.characters,
                 onChanged: (value) =>
                     _updateCompany((c) => c.copyWith(city: value)),
@@ -223,7 +226,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
         const SizedBox(height: 10),
         AppTextField(
           initialValue: _company.phone,
-          hint: 'Téléphone',
+          label: 'Téléphone',
           keyboardType: TextInputType.phone,
           prefixIcon: Icons.phone_outlined,
           onChanged: (value) => _updateCompany((c) => c.copyWith(phone: value)),
@@ -231,7 +234,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
         const SizedBox(height: 10),
         AppTextField(
           initialValue: _company.email,
-          hint: 'E-mail',
+          label: 'E-mail',
           keyboardType: TextInputType.emailAddress,
           textCapitalization: TextCapitalization.none,
           prefixIcon: Icons.mail_outline,
