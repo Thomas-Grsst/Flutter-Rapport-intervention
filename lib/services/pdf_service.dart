@@ -895,15 +895,9 @@ class PdfService {
       crossAxisAlignment: pw.CrossAxisAlignment.start,
       children: [
         pw.Expanded(
-          child: _signatureBox(
-            title: report.technicians.length > 1
-                ? 'Signature des intervenants'
-                : "Signature de l'intervenant",
-            caption: [
-              report.techniciansLine,
-              company.name,
-              'Le : ${_dayFormat.format(report.interventionEndDate ?? report.interventionDate)}',
-            ].where((line) => line.trim().isNotEmpty).join('\n'),
+          child: _stampBox(
+            report: report,
+            company: company,
             signature: technicianSignature,
           ),
         ),
@@ -930,16 +924,90 @@ class PdfService {
       pw.SizedBox(height: 18),
     ];
 
-    // Les deux cadres de signature ne se coupent pas en deux : ils partent
-    // ensemble sur la page suivante s'il n'y a plus la place.
+    // Le titre reste avec l'évaluation, et les cadres — cachet et signature
+    // du client — forment un bloc à part qui ne se coupe pas en deux. Les
+    // garder tous ensemble laissait une demi-page vide dès que l'ensemble ne
+    // tenait plus dans le bas de la page.
     return [
       if (evaluation.length <= _keepWithTitleLimit)
-        _keepTogether([...header, signatures])
-      else ...[
+        _keepTogether(header)
+      else
         ...header,
-        pw.Inseparable(child: signatures),
-      ],
+      pw.Inseparable(child: signatures),
     ];
+  }
+
+  /// Le cachet de l'entreprise, signé par l'intervenant.
+  ///
+  /// C'est ce que porte le rapport papier en fin de document : le tampon de
+  /// la société, la signature tracée par-dessus, puis le nom de qui est
+  /// intervenu et la date. Le tampon est composé à partir de la fiche
+  /// entreprise, il ne peut donc pas dater par rapport à l'en-tête.
+  pw.Widget _stampBox({
+    required Report report,
+    required Company company,
+    pw.MemoryImage? signature,
+  }) {
+    final lines = company.stampLines;
+    final date = report.interventionEndDate ?? report.interventionDate;
+
+    return pw.Column(
+      crossAxisAlignment: pw.CrossAxisAlignment.start,
+      children: [
+        pw.Text(
+          report.technicians.length > 1
+              ? 'Cachet et signatures des intervenants'
+              : "Cachet et signature de l'intervenant",
+          style: const pw.TextStyle(
+            fontSize: 9.5,
+            fontWeight: pw.FontWeight.bold,
+            color: brandDark,
+          ),
+        ),
+        pw.SizedBox(height: 5),
+        pw.Container(
+          height: 90,
+          width: double.infinity,
+          padding: const pw.EdgeInsets.symmetric(horizontal: 6, vertical: 5),
+          decoration: pw.BoxDecoration(border: pw.Border.all(color: lineGrey)),
+          child: pw.Stack(
+            alignment: pw.Alignment.center,
+            children: [
+              pw.Column(
+                mainAxisAlignment: pw.MainAxisAlignment.center,
+                crossAxisAlignment: pw.CrossAxisAlignment.center,
+                children: [
+                  for (var i = 0; i < lines.length; i++)
+                    pw.Text(
+                      lines[i],
+                      textAlign: pw.TextAlign.center,
+                      style: pw.TextStyle(
+                        fontSize: i == 0 ? 8.5 : 7,
+                        fontWeight:
+                            i == 0 ? pw.FontWeight.bold : pw.FontWeight.normal,
+                        lineSpacing: 1.5,
+                      ),
+                    ),
+                ],
+              ),
+              // La signature se pose par-dessus le cachet, comme sur papier.
+              if (signature != null)
+                pw.Positioned.fill(
+                  child: pw.Image(signature, fit: pw.BoxFit.contain),
+                ),
+            ],
+          ),
+        ),
+        pw.SizedBox(height: 5),
+        pw.Text(
+          [
+            report.techniciansLine,
+            'Le : ${_dayFormat.format(date)}',
+          ].where((line) => line.trim().isNotEmpty).join('\n'),
+          style: const pw.TextStyle(fontSize: 8.5, color: textGrey),
+        ),
+      ],
+    );
   }
 
   pw.Widget _signatureBox({

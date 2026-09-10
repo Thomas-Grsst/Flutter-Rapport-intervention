@@ -40,6 +40,25 @@ void main() {
       ]);
     });
 
+    test('compose le cachet apposé en fin de rapport', () {
+      final stamp = AppSettings.defaults.company.stampLines;
+
+      expect(stamp, [
+        "AU SERVICE DE L'EAU",
+        '164, Route de Lyon - 01600 TREVOUX',
+        'SASU au capital de 2 000,00 €',
+        'SIRET 91345781800015',
+        'RCS BOURG EN BRESSE B 913 457 818',
+        'TVA Intracommunautaire : FR82913457818',
+      ]);
+    });
+
+    test('n\'imprime pas de ligne vide dans un cachet incomplet', () {
+      const company = Company(name: "AU SERVICE DE L'EAU", siret: '123');
+
+      expect(company.stampLines, ["AU SERVICE DE L'EAU", 'SIRET 123']);
+    });
+
     test('survit à un aller-retour JSON, mentions légales comprises', () {
       final original = AppSettings.defaults.company;
       final restored = Company.fromJson(original.toJson());

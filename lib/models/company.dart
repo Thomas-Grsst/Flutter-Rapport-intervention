@@ -76,6 +76,28 @@ class Company {
         if (email.isNotEmpty) 'Mail : $email',
       ];
 
+  /// Le cachet de l'entreprise, tel qu'il est apposé en fin de rapport.
+  ///
+  /// Composé à partir de la fiche entreprise plutôt que scanné : il reste
+  /// ainsi d'aplomb avec l'en-tête et le pied de page, sans risque
+  /// d'imprimer une vieille adresse pendant des mois.
+  List<String> get stampLines {
+    final capitalLine = [
+      if (legalForm.trim().isNotEmpty) legalForm.trim(),
+      if (capital.trim().isNotEmpty) 'au capital de ${capital.trim()}',
+    ].join(' ');
+
+    return <String>[
+      if (name.trim().isNotEmpty) name.trim().toUpperCase(),
+      if (addressOneLine.isNotEmpty) addressOneLine,
+      if (capitalLine.isNotEmpty) capitalLine,
+      if (siret.trim().isNotEmpty) 'SIRET ${siret.trim()}',
+      if (rcs.trim().isNotEmpty) 'RCS ${rcs.trim()}',
+      if (vatNumber.trim().isNotEmpty)
+        'TVA Intracommunautaire : ${vatNumber.trim()}',
+    ];
+  }
+
   /// Mentions legales imprimees en pied de chaque page.
   ///
   /// Retombe sur les coordonnees tant qu'aucune mention n'est renseignee :

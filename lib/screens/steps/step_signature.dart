@@ -251,10 +251,13 @@ class _SignaturePadPage extends StatefulWidget {
 }
 
 class _SignaturePadPageState extends State<_SignaturePadPage> {
+  /// Fond transparent à l'export : la signature de l'intervenant se pose
+  /// par-dessus le cachet de l'entreprise en fin de rapport, ce qu'un fond
+  /// blanc opaque masquerait entièrement.
   final SignatureController _controller = SignatureController(
     penStrokeWidth: 3,
     penColor: Colors.black,
-    exportBackgroundColor: Colors.white,
+    exportBackgroundColor: Colors.transparent,
   );
 
   @override
