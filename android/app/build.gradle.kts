@@ -7,10 +7,12 @@ plugins {
 android {
     namespace = "fr.auservicedeleau.rapport_intervention"
     compileSdk = flutter.compileSdkVersion
-    // Pas de `ndkVersion` : l'application ne compile aucun code natif, et
-    // aucune de ses dépendances non plus. L'exiger poussait Gradle à
-    // télécharger le NDK à chaque compilation — plusieurs gigaoctets, et un
-    // échec net sur un poste dont le sdkmanager ne sait pas l'installer.
+
+    // Le NDK est nécessaire même sans une ligne de code natif : le moteur
+    // Flutter livre un `libflutter.so` de 165 Mo par architecture, que Gradle
+    // dépouille de ses symboles de débogage au moment d'empaqueter l'APK avec
+    // l'outil `strip` du NDK. Sans ce dépouillement, l'APK dépasse 490 Mo.
+    ndkVersion = flutter.ndkVersion
 
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_17

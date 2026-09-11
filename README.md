@@ -234,7 +234,7 @@ copiez-le sur le téléphone et ouvrez-le. Android demandera d'autoriser
 l'installation d'applications de cette source — c'est normal en dehors du
 Play Store.
 
-Un APK par architecture, plus léger à transférer :
+Un APK par architecture, trois fois plus léger à transférer :
 
 ```bash
 flutter build apk --release --split-per-abi
@@ -242,6 +242,21 @@ flutter build apk --release --split-per-abi
 
 Celui qui convient à la quasi-totalité des téléphones récents est
 `app-arm64-v8a-release.apk`.
+
+### Le NDK est nécessaire
+
+Une compilation en `--release` réclame le **NDK Android**, même si
+l'application ne contient pas une ligne de code natif : le moteur Flutter
+livre un `libflutter.so` de 165 Mo par architecture, que Gradle dépouille de
+ses symboles de débogage avec l'outil `strip` du NDK. Sans lui, l'APK dépasse
+490 Mo au lieu d'une trentaine.
+
+Gradle l'installe tout seul la première fois. Si l'installation échoue
+(« *Install NDK (Side by side) … failed* »), passez par l'interface plutôt que
+par la ligne de commande : Android Studio → **Settings** → *Languages &
+Frameworks* → **Android SDK** → onglet **SDK Tools** → cochez **Show Package
+Details** → dépliez **NDK (Side by side)** → cochez la version que Gradle
+réclame.
 
 > Sans clé de signature configurée, Flutter signe l'APK avec sa clé de
 > débogage. Cela suffit pour installer l'application à la main, mais les mises
