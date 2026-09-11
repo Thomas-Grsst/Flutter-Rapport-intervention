@@ -258,11 +258,36 @@ Frameworks* → **Android SDK** → onglet **SDK Tools** → cochez **Show Packa
 Details** → dépliez **NDK (Side by side)** → cochez la version que Gradle
 réclame.
 
-> Sans clé de signature configurée, Flutter signe l'APK avec sa clé de
-> débogage. Cela suffit pour installer l'application à la main, mais les mises
-> à jour ne s'installeront par-dessus que si la clé reste la même — gardez le
-> même poste pour compiler, ou [configurez une clé de
-> publication](https://docs.flutter.dev/deployment/android#signing-the-app).
+### Signer avec votre clé
+
+Sans clé de publication, Flutter signe l'APK avec sa clé de débogage. Il
+s'installe très bien, mais **une mise à jour ne remplace une application
+installée que si elle porte la même signature** : recompiler depuis un autre
+PC obligerait à désinstaller puis réinstaller, en perdant tous les rapports.
+Une vraie clé règle la question une fois pour toutes.
+
+Créez le magasin de clés, une seule fois, hors du dépôt :
+
+```bash
+keytool -genkey -v -keystore %USERPROFILE%\cle-rapport.jks ^
+  -storetype JKS -keyalg RSA -keysize 2048 -validity 10000 -alias rapport
+```
+
+`keytool` est livré avec le JDK d'Android Studio ; si la commande est
+introuvable, elle se trouve dans
+`C:\Program Files\Android\Android Studio\jbr\bin`.
+
+Copiez ensuite
+[`android/key.properties.exemple`](android/key.properties.exemple) en
+`android/key.properties` et remplissez-le. La prochaine compilation en
+`--release` utilisera cette clé ; sans ce fichier, elle retombe sur la clé de
+débogage.
+
+> `key.properties` et le `.jks` ne sont pas versionnés, et ne doivent jamais
+> l'être : qui les détient peut signer une mise à jour au nom de
+> l'application. **Sauvegardez-les ailleurs que sur le PC de compilation** —
+> une clé perdue, c'est l'impossibilité de mettre à jour les applications
+> déjà installées.
 
 L'icône de l'application est dessinée par [`tool/icone.py`](tool/icone.py),
 qui la décline dans toutes les tailles d'Android, d'iOS et du web :

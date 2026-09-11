@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:printing/printing.dart';
 import 'package:provider/provider.dart';
-import 'package:share_plus/share_plus.dart';
 
 import '../models/enums.dart';
 import '../models/photo_item.dart';
@@ -144,20 +143,19 @@ class _ReportDetailScreenState extends State<ReportDetailScreen> {
   }
 
   /// Ouvre la feuille de partage du système avec le PDF en pièce jointe.
+  ///
+  /// Le partage passe par `printing`, déjà utilisé pour l'aperçu, plutôt que
+  /// par un second paquet : celui-ci est écrit en Kotlin et les futures
+  /// versions de Flutter refuseront de compiler une application qui en
+  /// dépend. On partage les octets plutôt qu'un chemin, car dans un
+  /// navigateur le PDF n'existe pas comme fichier sur le disque.
   Future<void> _sharePdf(Report report, SavedPdf pdf) async {
-    // On partage les octets plutôt qu'un chemin : dans un navigateur, le PDF
-    // n'existe pas comme fichier sur le disque.
-    await Share.shareXFiles(
-      [
-        XFile.fromData(
-          pdf.bytes,
-          name: pdf.fileName,
-          mimeType: 'application/pdf',
-        ),
-      ],
+    await Printing.sharePdf(
+      bytes: pdf.bytes,
+      filename: pdf.fileName,
       subject: '${report.kind.documentTitle} '
           '${report.reportNumber} — ${report.displayTitle}',
-      text: 'Bonjour,\n\nVeuillez trouver ci-joint le rapport de '
+      body: 'Bonjour,\n\nVeuillez trouver ci-joint le rapport de '
           "l'intervention du "
           '${_dateFormat.format(report.interventionDate)}.\n\n'
           'Cordialement,',

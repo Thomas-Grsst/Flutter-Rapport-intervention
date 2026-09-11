@@ -1,0 +1,23 @@
+# Modèle de android/key.properties — la clé qui signe les APK de publication.
+#
+# Copiez ce fichier en `key.properties` dans le même dossier, remplissez les
+# quatre lignes, et `flutter build apk --release` signera avec votre clé.
+#
+# Le vrai fichier et le magasin de clés (.jks) ne sont jamais versionnés :
+# qui les détient peut signer une mise à jour au nom de l'application.
+# Gardez-en une copie de sauvegarde ailleurs que sur le PC de compilation —
+# perdre cette clé, c'est ne plus jamais pouvoir mettre à jour l'application
+# déjà installée sur les téléphones.
+
+# Chemin du magasin de clés, absolu ou relatif au dossier android/.
+# Sous Windows, doublez les antislashs : C:\\Users\\Moi\\cle-rapport.jks
+storeFile=
+
+# Mot de passe du magasin, donné à la création.
+storePassword=
+
+# Nom de la clé dans le magasin (l'alias donné à la création).
+keyAlias=rapport
+
+# Mot de passe de la clé. Souvent le même que celui du magasin.
+keyPassword=

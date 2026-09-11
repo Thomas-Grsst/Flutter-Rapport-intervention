@@ -46,8 +46,10 @@ dependencies:
   signature: ^5.5.0
 
   pdf: ^3.11.0
+  # Genere, affiche, imprime et partage le PDF. Il fait aussi le partage, ce
+  # qui evite share_plus : celui-ci applique le plugin Gradle Kotlin, que les
+  # futures versions de Flutter refuseront.
   printing: ^5.13.0
-  share_plus: ^10.0.0
 
 dev_dependencies:
   flutter_test:
