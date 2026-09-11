@@ -10,6 +10,7 @@ import '../models/enums.dart';
 import '../models/photo_group.dart';
 import '../models/photo_item.dart';
 import '../models/report.dart';
+import 'pdf_style.dart';
 import 'relevage_pdf.dart';
 import 'storage_service.dart';
 
@@ -39,11 +40,11 @@ class PdfService {
 
   final StorageService _storage;
 
-  static const PdfColor brandDark = PdfColor.fromInt(0xFF104C7E);
-  static const PdfColor brandLight = PdfColor.fromInt(0xFF8FB8E8);
-  static const PdfColor paleBlue = PdfColor.fromInt(0xFFEAF2FB);
-  static const PdfColor lineGrey = PdfColor.fromInt(0xFFD5DEE8);
-  static const PdfColor textGrey = PdfColor.fromInt(0xFF5A6773);
+  static const PdfColor brandDark = PdfStyle.brandDark;
+  static const PdfColor brandLight = PdfStyle.brandLight;
+  static const PdfColor paleBlue = PdfStyle.paleBlue;
+  static const PdfColor lineGrey = PdfStyle.lineGrey;
+  static const PdfColor textGrey = PdfStyle.textGrey;
 
   static final DateFormat _dayFormat = DateFormat('dd/MM/yyyy');
 
@@ -94,6 +95,9 @@ class PdfService {
       theme: await _theme,
     );
 
+    // Les deux modèles partagent la page de garde : seul le contenu change.
+    doc.addPage(_coverPage(report: report, company: company, logo: logo));
+
     if (report.kind == ReportKind.posteRelevage) {
       doc.addPage(
         _relevagePages(
@@ -106,7 +110,6 @@ class PdfService {
       return doc.save();
     }
 
-    doc.addPage(_coverPage(report: report, company: company, logo: logo));
     doc.addPage(
       _contentPages(
         report: report,
@@ -121,24 +124,27 @@ class PdfService {
     return doc.save();
   }
 
-  /// Le rapport d'entretien de poste de relevage, qui suit un gabarit figé et
-  /// ne porte ni pied de page ni pagination — comme le modèle de référence.
+  /// Le rapport d'entretien de poste de relevage : le gabarit figé, posé dans
+  /// les mêmes pages que le rapport d'intervention.
   pw.MultiPage _relevagePages({
     required Report report,
     required Company company,
     required Map<String, pw.MemoryImage> photoImages,
     pw.MemoryImage? logo,
   }) {
-    const layout = RelevagePdfLayout(brandDark: brandDark);
+    const layout = RelevagePdfLayout();
 
     return pw.MultiPage(
       pageFormat: PdfPageFormat.a4,
-      margin: const pw.EdgeInsets.fromLTRB(45, 40, 45, 40),
+      // Marge basse un peu plus haute : le pied de page porte les
+      // mentions légales sur une ou deux lignes, plus la pagination.
+      margin: const pw.EdgeInsets.fromLTRB(45, 40, 45, 68),
+      header: (context) => _pageHeader(company, logo),
+      footer: (context) => _pageFooter(context, company),
       build: (context) => layout.build(
         report: report,
         company: company,
         photoImages: photoImages,
-        logo: logo,
       ),
     );
   }
@@ -190,89 +196,35 @@ class PdfService {
 
   // --- Page de garde --------------------------------------------------------
 
+  /// Page de garde du rapport, commune aux deux modèles.
   pw.Page _coverPage({
     required Report report,
     required Company company,
     pw.MemoryImage? logo,
-  }) {
-    return pw.Page(
-      pageFormat: PdfPageFormat.a4,
-      margin: const pw.EdgeInsets.all(0),
-      build: (context) {
-        return pw.Stack(
-          children: [
-            // Bandeau bleu vertical à gauche.
-            pw.Positioned(
-              left: 0,
-              top: 0,
-              child: pw.Container(
-                width: 18,
-                height: PdfPageFormat.a4.height,
-                color: brandLight,
-              ),
-            ),
-            // Largeur et hauteur explicites : la colonne ci-dessous utilise
-            // des Spacer, qui ont besoin de contraintes bornées.
-            pw.Container(
-              width: PdfPageFormat.a4.width,
-              height: PdfPageFormat.a4.height,
-              padding: const pw.EdgeInsets.fromLTRB(60, 70, 45, 45),
-              child: pw.Column(
-                crossAxisAlignment: pw.CrossAxisAlignment.start,
-                children: [
-                  if (logo != null)
-                    pw.Container(
-                      height: 110,
-                      alignment: pw.Alignment.centerLeft,
-                      child: pw.Image(logo, fit: pw.BoxFit.contain),
-                    ),
-                  pw.Spacer(),
-                  pw.Text(
-                    "Rapport d'intervention",
-                    style: const pw.TextStyle(
-                      fontSize: 34,
-                      fontWeight: pw.FontWeight.bold,
-                      color: brandDark,
-                    ),
-                  ),
-                  pw.SizedBox(height: 14),
-                  pw.Container(width: 120, height: 3, color: brandLight),
-                  pw.SizedBox(height: 22),
-                  pw.Text(
-                    report.displayTitle.toUpperCase(),
-                    style: const pw.TextStyle(
-                      fontSize: 18,
-                      color: brandDark,
-                      letterSpacing: 0.6,
-                    ),
-                  ),
-                  pw.SizedBox(height: 8),
-                  pw.Text(
-                    _dateLine(report),
-                    style: const pw.TextStyle(fontSize: 14, color: textGrey),
-                  ),
-                  pw.Spacer(),
-                  if (company.name.isNotEmpty)
-                    pw.Text(
-                      company.name.toUpperCase(),
-                      style: const pw.TextStyle(
-                        fontSize: 16,
-                        fontWeight: pw.FontWeight.bold,
-                        color: brandDark,
-                      ),
-                    ),
-                  pw.SizedBox(height: 6),
-                  pw.Text(
-                    company.contactLine,
-                    style: const pw.TextStyle(fontSize: 9.5, color: textGrey),
-                  ),
-                ],
-              ),
-            ),
-          ],
-        );
-      },
-    );
+  }) =>
+      PdfStyle.coverPage(
+        title: report.kind.documentTitle,
+        subtitle: _coverSubtitle(report),
+        dateLine: _dateLine(report),
+        company: company,
+        logo: logo,
+      );
+
+  /// L'objet du rapport, sous son titre.
+  ///
+  /// Pour un entretien, le titre dit déjà de quoi il s'agit : la ligne du
+  /// dessous nomme donc le poste lui-même, ce qui distingue deux rapports
+  /// d'un même client.
+  String _coverSubtitle(Report report) {
+    if (report.kind != ReportKind.posteRelevage) {
+      return report.displayTitle.toUpperCase();
+    }
+    final poste = [report.equipmentBrand.trim(), report.equipmentType.trim()]
+        .where((part) => part.isNotEmpty)
+        .join(' ');
+    return poste.isEmpty
+        ? 'POSTE DE RELEVAGE'
+        : 'POSTE DE RELEVAGE — ${poste.toUpperCase()}';
   }
 
   // --- Pages de contenu -----------------------------------------------------
@@ -315,81 +267,11 @@ class PdfService {
     );
   }
 
-  /// En-tête de chaque page : le logo à gauche, les coordonnées de
-  /// l'entreprise à droite, comme sur le modèle papier.
-  pw.Widget _pageHeader(Company company, pw.MemoryImage? logo) {
-    return pw.Container(
-      margin: const pw.EdgeInsets.only(bottom: 18),
-      padding: const pw.EdgeInsets.only(bottom: 8),
-      decoration: const pw.BoxDecoration(
-        border: pw.Border(bottom: pw.BorderSide(color: brandLight, width: 2)),
-      ),
-      child: pw.Row(
-        crossAxisAlignment: pw.CrossAxisAlignment.start,
-        children: [
-          if (logo != null)
-            pw.Container(
-              height: 46,
-              width: 90,
-              alignment: pw.Alignment.centerLeft,
-              child: pw.Image(logo, fit: pw.BoxFit.contain),
-            )
-          else
-            pw.SizedBox(width: 90),
-          pw.Spacer(),
-          pw.Column(
-            crossAxisAlignment: pw.CrossAxisAlignment.end,
-            children: [
-              if (company.displayName.isNotEmpty)
-                pw.Text(
-                  company.displayName,
-                  style: const pw.TextStyle(
-                    fontSize: 10.5,
-                    fontWeight: pw.FontWeight.bold,
-                    color: brandDark,
-                  ),
-                ),
-              for (final line in company.contactLines)
-                pw.Text(
-                  line,
-                  style: const pw.TextStyle(fontSize: 8, color: textGrey),
-                ),
-            ],
-          ),
-        ],
-      ),
-    );
-  }
+  pw.Widget _pageHeader(Company company, pw.MemoryImage? logo) =>
+      PdfStyle.pageHeader(company, logo);
 
-  /// Pied de page : les mentions légales de l'entreprise et la pagination.
-  ///
-  /// Les mentions sont centrées sur toute la largeur et la pagination passe
-  /// en dessous : mises côte à côte, une raison sociale un peu longue passait
-  /// à la ligne et le numéro de page se retrouvait au milieu du texte.
-  pw.Widget _pageFooter(pw.Context context, Company company) {
-    return pw.Container(
-      margin: const pw.EdgeInsets.only(top: 12),
-      padding: const pw.EdgeInsets.only(top: 6),
-      decoration: const pw.BoxDecoration(
-        border: pw.Border(top: pw.BorderSide(color: lineGrey)),
-      ),
-      child: pw.Column(
-        crossAxisAlignment: pw.CrossAxisAlignment.center,
-        children: [
-          pw.Text(
-            company.legalLine,
-            textAlign: pw.TextAlign.center,
-            style: const pw.TextStyle(fontSize: 6.5, color: textGrey),
-          ),
-          pw.SizedBox(height: 3),
-          pw.Text(
-            '${context.pageNumber} / ${context.pagesCount}',
-            style: const pw.TextStyle(fontSize: 7.5, color: textGrey),
-          ),
-        ],
-      ),
-    );
-  }
+  pw.Widget _pageFooter(pw.Context context, Company company) =>
+      PdfStyle.pageFooter(context, company);
 
   // --- Blocs d'identification ----------------------------------------------
 
@@ -471,47 +353,8 @@ class PdfService {
     ];
   }
 
-  pw.Widget _infoBox({required String title, required List<String> lines}) {
-    final visible = lines.map((line) => line.trim()).toList();
-    // On retire les lignes vides en fin de bloc mais on garde les séparateurs
-    // internes, qui aèrent le bloc "Entreprise".
-    while (visible.isNotEmpty && visible.last.isEmpty) {
-      visible.removeLast();
-    }
-
-    return pw.Container(
-      padding: const pw.EdgeInsets.all(10),
-      decoration: pw.BoxDecoration(
-        color: paleBlue,
-        border: pw.Border.all(color: lineGrey),
-        borderRadius: pw.BorderRadius.circular(3),
-      ),
-      child: pw.Column(
-        crossAxisAlignment: pw.CrossAxisAlignment.start,
-        children: [
-          pw.Text(
-            title,
-            style: const pw.TextStyle(
-              fontSize: 10.5,
-              fontWeight: pw.FontWeight.bold,
-              color: brandDark,
-            ),
-          ),
-          pw.SizedBox(height: 6),
-          for (final line in visible)
-            line.isEmpty
-                ? pw.SizedBox(height: 6)
-                : pw.Padding(
-                    padding: const pw.EdgeInsets.only(bottom: 1.5),
-                    child: pw.Text(
-                      line,
-                      style: const pw.TextStyle(fontSize: 9.5),
-                    ),
-                  ),
-        ],
-      ),
-    );
-  }
+  pw.Widget _infoBox({required String title, required List<String> lines}) =>
+      PdfStyle.infoBox(title: title, lines: lines);
 
   /// "Le 12/03/2026" ou "Du 12/03/2026 au 14/03/2026".
   String _dateLine(Report report) {
@@ -538,46 +381,16 @@ class PdfService {
 
   // --- Sections de texte ----------------------------------------------------
 
-  pw.Widget _sectionTitle(String title) {
-    return pw.Container(
-      margin: const pw.EdgeInsets.only(bottom: 8),
-      child: pw.Column(
-        crossAxisAlignment: pw.CrossAxisAlignment.start,
-        children: [
-          pw.Text(
-            title,
-            style: const pw.TextStyle(
-              fontSize: 15,
-              fontWeight: pw.FontWeight.bold,
-              color: brandDark,
-            ),
-          ),
-          pw.SizedBox(height: 4),
-          pw.Container(width: 60, height: 2, color: brandLight),
-        ],
-      ),
-    );
-  }
+  pw.Widget _sectionTitle(String title) => PdfStyle.sectionTitle(title);
 
-  pw.Widget _paragraph(String text) => pw.Paragraph(
-        text: text,
-        style: const pw.TextStyle(fontSize: 10, lineSpacing: 2.5),
-        margin: const pw.EdgeInsets.only(bottom: 6),
-      );
+  pw.Widget _paragraph(String text) => PdfStyle.paragraph(text);
 
-  /// Regroupe des éléments pour que la coupure entre deux pages ne tombe
-  /// jamais entre eux.
-  ///
-  /// Sert à ne pas laisser un titre de section seul en bas d'une page, son
-  /// contenu commençant sur la suivante. À n'utiliser que sur des blocs dont
-  /// la hauteur est bornée : un bloc insécable plus haut qu'une page ne
-  /// pourrait être posé nulle part.
-  pw.Widget _keepTogether(List<pw.Widget> children) => pw.Inseparable(
-        child: pw.Column(
-          crossAxisAlignment: pw.CrossAxisAlignment.start,
-          children: children,
-        ),
-      );
+  pw.Widget _label(String text) => PdfStyle.label(text);
+
+  pw.Widget _bullet(String text) => PdfStyle.bullet(text);
+
+  pw.Widget _keepTogether(List<pw.Widget> children) =>
+      PdfStyle.keepTogether(children);
 
   /// Au-delà de cette longueur, un paragraphe remplit de toute façon le bas de
   /// la page et se poursuit sur la suivante : son titre n'y reste pas seul, et
@@ -654,39 +467,6 @@ class PdfService {
       pw.SizedBox(height: 14),
     ];
   }
-
-  pw.Widget _label(String text) => pw.Text(
-        text,
-        style: const pw.TextStyle(
-          fontSize: 10.5,
-          fontWeight: pw.FontWeight.bold,
-          color: brandDark,
-        ),
-      );
-
-  pw.Widget _bullet(String text) => pw.Padding(
-        padding: const pw.EdgeInsets.only(bottom: 4, left: 4),
-        child: pw.Row(
-          crossAxisAlignment: pw.CrossAxisAlignment.start,
-          children: [
-            pw.Container(
-              width: 4,
-              height: 4,
-              margin: const pw.EdgeInsets.only(top: 4, right: 7),
-              decoration: const pw.BoxDecoration(
-                color: brandDark,
-                shape: pw.BoxShape.circle,
-              ),
-            ),
-            pw.Expanded(
-              child: pw.Text(
-                text,
-                style: const pw.TextStyle(fontSize: 10, lineSpacing: 2),
-              ),
-            ),
-          ],
-        ),
-      );
 
   // --- Photographies --------------------------------------------------------
 
@@ -787,57 +567,8 @@ class PdfService {
     );
   }
 
-  pw.Widget _photoCard(PhotoItem photo, pw.MemoryImage image) {
-    return pw.Column(
-      crossAxisAlignment: pw.CrossAxisAlignment.start,
-      children: [
-        pw.Container(
-          // Trois colonnes par ligne : la vignette est plus étroite qu'avant,
-          // et une hauteur de 165 l'aurait rendue très verticale.
-          height: 112,
-          width: double.infinity,
-          decoration: pw.BoxDecoration(
-            border: pw.Border.all(color: lineGrey),
-            borderRadius: pw.BorderRadius.circular(3),
-          ),
-          child: pw.ClipRRect(
-            horizontalRadius: 3,
-            verticalRadius: 3,
-            child: pw.Image(image, fit: pw.BoxFit.cover),
-          ),
-        ),
-        pw.SizedBox(height: 4),
-        pw.Row(
-          crossAxisAlignment: pw.CrossAxisAlignment.start,
-          children: [
-            if (photo.stage != PhotoStage.autre)
-              pw.Container(
-                margin: const pw.EdgeInsets.only(right: 6),
-                padding:
-                    const pw.EdgeInsets.symmetric(horizontal: 5, vertical: 1.5),
-                decoration: pw.BoxDecoration(
-                  color: brandDark,
-                  borderRadius: pw.BorderRadius.circular(2),
-                ),
-                child: pw.Text(
-                  photo.stage.label.toUpperCase(),
-                  style: const pw.TextStyle(
-                    fontSize: 7,
-                    color: PdfColors.white,
-                  ),
-                ),
-              ),
-            pw.Expanded(
-              child: pw.Text(
-                photo.caption,
-                style: const pw.TextStyle(fontSize: 8.5, color: textGrey),
-              ),
-            ),
-          ],
-        ),
-      ],
-    );
-  }
+  pw.Widget _photoCard(PhotoItem photo, pw.MemoryImage image) =>
+      PdfStyle.photoCard(photo, image);
 
   // --- Conclusions ----------------------------------------------------------
 
@@ -1124,23 +855,11 @@ class PdfService {
 
   pw.Widget _legalNotice(Report report, Company company) {
     final name = company.name.isEmpty ? "l'entreprise" : company.name;
-    return pw.Container(
-      padding: const pw.EdgeInsets.only(top: 10),
-      decoration: const pw.BoxDecoration(
-        border: pw.Border(top: pw.BorderSide(color: lineGrey)),
-      ),
-      child: pw.Text(
-        "Ce document est un rapport d'intervention établi par $name à la suite "
-        "de l'intervention réalisée ${_dateLine(report).toLowerCase()}. "
-        "Toute nouvelle prestation fera l'objet d'un nouvel ordre de service et "
-        "d'un nouveau dossier.",
-        style: const pw.TextStyle(
-          fontSize: 7.5,
-          color: textGrey,
-          fontStyle: pw.FontStyle.italic,
-        ),
-        textAlign: pw.TextAlign.justify,
-      ),
+    return PdfStyle.legalNotice(
+      "Ce document est un rapport d'intervention établi par $name à la suite "
+      "de l'intervention réalisée ${_dateLine(report).toLowerCase()}. "
+      'Toute nouvelle prestation fera l\'objet d\'un nouvel ordre de service '
+      "et d'un nouveau dossier.",
     );
   }
 }

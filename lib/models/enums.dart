@@ -6,7 +6,7 @@
 enum ReportKind {
   intervention("Rapport d'intervention", 'Intervention'),
   posteRelevage(
-    'Rapport de poste de relevage',
+    "Rapport d'entretien",
     'Entretien poste de relevage',
   );
 

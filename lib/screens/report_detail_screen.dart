@@ -8,6 +8,7 @@ import '../models/enums.dart';
 import '../models/photo_item.dart';
 import '../models/relevage_template.dart';
 import '../models/report.dart';
+import '../services/pdf_download.dart';
 import '../services/pdf_service.dart';
 import '../state/reports_provider.dart';
 import '../state/settings_provider.dart';
@@ -108,6 +109,61 @@ class _ReportDetailScreenState extends State<ReportDetailScreen> {
     }
   }
 
+  /// Enregistre le PDF là où l'utilisateur le retrouvera.
+  ///
+  /// Sur iOS, l'appareil n'a pas de dossier de téléchargements : on ouvre
+  /// alors la feuille de partage du système, qui propose « Enregistrer dans
+  /// Fichiers » — plutôt que de dire que ce n'est pas possible.
+  Future<void> _downloadPdf(Report report, SavedPdf pdf) async {
+    final messenger = ScaffoldMessenger.of(context);
+
+    try {
+      final result = await downloadPdf(pdf.bytes, pdf.fileName);
+      if (!mounted) return;
+
+      if (!result.done) {
+        await _sharePdf(report, pdf);
+        return;
+      }
+
+      messenger.showSnackBar(
+        SnackBar(
+          content: Text(
+            result.path == null
+                ? 'PDF téléchargé : ${pdf.fileName}'
+                : 'PDF enregistré dans ${result.path}',
+          ),
+        ),
+      );
+    } on Exception catch (error) {
+      if (!mounted) return;
+      messenger.showSnackBar(
+        SnackBar(content: Text('Téléchargement impossible : $error')),
+      );
+    }
+  }
+
+  /// Ouvre la feuille de partage du système avec le PDF en pièce jointe.
+  Future<void> _sharePdf(Report report, SavedPdf pdf) async {
+    // On partage les octets plutôt qu'un chemin : dans un navigateur, le PDF
+    // n'existe pas comme fichier sur le disque.
+    await Share.shareXFiles(
+      [
+        XFile.fromData(
+          pdf.bytes,
+          name: pdf.fileName,
+          mimeType: 'application/pdf',
+        ),
+      ],
+      subject: '${report.kind.documentTitle} '
+          '${report.reportNumber} — ${report.displayTitle}',
+      text: 'Bonjour,\n\nVeuillez trouver ci-joint le rapport de '
+          "l'intervention du "
+          '${_dateFormat.format(report.interventionDate)}.\n\n'
+          'Cordialement,',
+    );
+  }
+
   Future<void> _showPdfActions(Report report, SavedPdf pdf) async {
     await showModalBottomSheet<void>(
       context: context,
@@ -141,28 +197,21 @@ class _ReportDetailScreenState extends State<ReportDetailScreen> {
               },
             ),
             ListTile(
+              leading: const Icon(Icons.download_outlined),
+              title: const Text('Télécharger le PDF'),
+              subtitle: const Text('Garder le fichier sur l\'appareil'),
+              onTap: () async {
+                Navigator.of(sheetContext).pop();
+                await _downloadPdf(report, pdf);
+              },
+            ),
+            ListTile(
               leading: const Icon(Icons.send_outlined),
               title: const Text('Envoyer au client'),
               subtitle: const Text('E-mail, SMS, WhatsApp…'),
               onTap: () async {
                 Navigator.of(sheetContext).pop();
-                // On partage les octets plutôt qu'un chemin : dans un
-                // navigateur, le PDF n'existe pas comme fichier sur le disque.
-                await Share.shareXFiles(
-                  [
-                    XFile.fromData(
-                      pdf.bytes,
-                      name: pdf.fileName,
-                      mimeType: 'application/pdf',
-                    ),
-                  ],
-                  subject: "Rapport d'intervention "
-                      '${report.reportNumber} — ${report.displayTitle}',
-                  text: 'Bonjour,\n\nVeuillez trouver ci-joint le rapport de '
-                      "l'intervention du "
-                      '${_dateFormat.format(report.interventionDate)}.\n\n'
-                      'Cordialement,',
-                );
+                await _sharePdf(report, pdf);
               },
             ),
           ],

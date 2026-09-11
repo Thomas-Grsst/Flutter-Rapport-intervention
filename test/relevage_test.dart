@@ -3,7 +3,7 @@ import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:pdf/pdf.dart' show PdfColors;
+
 import 'package:pdf/widgets.dart' as pw;
 import 'package:provider/provider.dart';
 import 'package:rapport_intervention/models/app_settings.dart';
@@ -312,7 +312,7 @@ void main() {
         photos.add(PhotoItem(id: 'p$i', filePath: 'media/p$i.png'));
       }
 
-      final rows = const RelevagePdfLayout(brandDark: PdfColors.blue)
+      final rows = const RelevagePdfLayout()
           .photoRows(photos.sublist(0, 2), photos.sublist(2), images);
 
       // Deux blocs insécables : « Avant » et « Après », chacun avec sa rangée.

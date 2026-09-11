@@ -58,6 +58,12 @@ Chaque section porte ses propres photos, en deux temps : un **avant** et un
 si bien qu'une photo d'après tombe sous celle d'avant à laquelle elle répond.
 L'un des deux temps peut manquer : tout ne se photographie pas deux fois.
 
+Le PDF sort dans la même charte que le rapport d'intervention — même page de
+garde, même en-tête, mêmes cadres d'identification, mêmes titres de section et
+mêmes cadres photo. Les deux rapports sortent de la même entreprise et se
+lisent l'un après l'autre : la charte est écrite une seule fois, dans
+[`lib/services/pdf_style.dart`](lib/services/pdf_style.dart).
+
 ## Fonctionnalités
 
 - **Deux modèles de rapport**, choisis à la création : l'intervention ponctuelle
@@ -86,8 +92,12 @@ L'un des deux temps peut manquer : tout ne se photographie pas deux fois.
   l'entreprise en haut de chaque page, mentions légales (SIRET, APE, RCS, TVA,
   capital) en bas.
 - **Numérotation automatique** des rapports (`ASE-120326-MB`).
-- **Export PDF** : aperçu, impression, et envoi au client par e-mail, SMS ou
-  messagerie.
+- **Export PDF** : aperçu, impression, téléchargement du fichier sur l'appareil
+  et envoi au client par e-mail, SMS ou messagerie. Le téléchargement écrit
+  dans le dossier de téléchargements du téléphone ; dans un navigateur, c'est
+  lui qui reçoit le fichier. Faute de dossier de téléchargements — c'est le cas
+  sur iOS —, la feuille de partage du système prend le relais, avec son
+  « Enregistrer dans Fichiers ».
 - **Recherche et filtres** par client, adresse, numéro de rapport et statut
   (en cours / à suivre / terminés).
 - **Fiche entreprise** (nom, adresse, téléphone, e-mail, mentions légales,
@@ -163,8 +173,10 @@ lib/
 │   ├── storage_service_io.dart   Fichiers, sur téléphone
 │   ├── storage_service_web.dart  Stockage du navigateur
 │   ├── media_store_web.dart      Photos du navigateur (IndexedDB)
+│   ├── pdf_style.dart            Charte commune aux deux rapports
 │   ├── pdf_service.dart          Génération du PDF mis en page
-│   └── relevage_pdf.dart         Mise en page du poste de relevage
+│   ├── relevage_pdf.dart         Mise en page du poste de relevage
+│   └── pdf_download.dart         Téléchargement du PDF sur l'appareil
 ├── state/                     ReportsProvider, SettingsProvider
 ├── screens/
 │   ├── home_screen.dart       Liste, recherche, filtres, choix du modèle
