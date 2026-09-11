@@ -39,6 +39,19 @@ android {
             signingConfig = signingConfigs.getByName("debug")
         }
     }
+
+    packaging {
+        jniLibs {
+            // Les bibliothèques natives partent telles quelles dans l'APK.
+            //
+            // Seul le moteur Flutter en apporte, et elles sont déjà dépouillées
+            // de leurs symboles de débogage. Les faire passer par `strip`
+            // n'allégerait rien mais réclamerait le NDK Android — plusieurs
+            // gigaoctets à télécharger, pour une application qui ne compile
+            // aucune ligne de code natif.
+            keepDebugSymbols += "**/*.so"
+        }
+    }
 }
 
 kotlin {
