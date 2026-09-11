@@ -67,19 +67,23 @@ def goutte(dessin, cx, cy, largeur, couleur):
     )
 
 
-def glyphe(image, echelle, decalage_y=0.0):
+def glyphe(image, echelle, decalage_y=0.0, simple=False):
     """La feuille et la goutte, posées sur [image].
 
     [echelle] vaut 1 pour une icône pleine ; l'icône adaptative d'Android la
     réduit, ses bords pouvant être rognés par la forme du lanceur.
+
+    [simple] retire les lignes de texte et grossit le dessin : en dessous de
+    32 pixels, elles se rejoignent en une tache grise et la feuille perd sa
+    forme. Mieux vaut alors deux formes lisibles que cinq illisibles.
     """
     t = image.size[0]
     d = ImageDraw.Draw(image)
     cx, cy = t / 2, t / 2 + t * decalage_y
 
     # La feuille.
-    largeur = t * 0.455 * echelle
-    hauteur = t * 0.585 * echelle
+    largeur = t * (0.53 if simple else 0.455) * echelle
+    hauteur = t * (0.66 if simple else 0.585) * echelle
     gauche, haut = cx - largeur / 2, cy - hauteur / 2
     d.rounded_rectangle(
         [gauche, haut, gauche + largeur, haut + hauteur],
@@ -89,8 +93,10 @@ def glyphe(image, echelle, decalage_y=0.0):
 
     # Les lignes de texte du rapport.
     marge = largeur * 0.155
+    if simple:
+        marge = None
     epaisseur = hauteur * 0.062
-    for i, part in enumerate((1.0, 1.0, 0.62)):
+    for i, part in enumerate(() if simple else (1.0, 1.0, 0.62)):
         y = haut + hauteur * (0.17 + i * 0.15)
         d.rounded_rectangle(
             [gauche + marge, y,
@@ -107,9 +113,9 @@ def glyphe(image, echelle, decalage_y=0.0):
     goutte(d, gx, gy, largeur * 0.60 * 0.80, BLEU_MOYEN)
 
 
-def icone(taille, rayon_ratio=0.2235, echelle=1.0):
+def icone(taille, rayon_ratio=0.2235, echelle=1.0, simple=None):
     image = fond(taille, rayon_ratio)
-    glyphe(image, echelle)
+    glyphe(image, echelle, simple=taille <= 32 if simple is None else simple)
     return image.resize((taille, taille), Image.LANCZOS)
 
 
@@ -169,7 +175,9 @@ def ios():
 
 
 def web():
-    ecrire(icone(16, rayon_ratio=0.18), RACINE / 'web/favicon.png')
+    # 32 plutot que 16 : les onglets des ecrans denses y gagnent en nettete,
+    # et le navigateur reduit lui-meme quand il a besoin de plus petit.
+    ecrire(icone(32, rayon_ratio=0.18), RACINE / 'web/favicon.png')
     for taille in (192, 512):
         ecrire(icone(taille), RACINE / f'web/icons/Icon-{taille}.png')
         # Les icones « maskable » sont rognees en cercle par le systeme : le
