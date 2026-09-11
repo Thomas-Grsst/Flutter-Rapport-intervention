@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Le bleu de l'application, derrière l'icône adaptative. -->
+    <color name="ic_launcher_background">#104C7E</color>
+</resources>

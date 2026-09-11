@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:provider/provider.dart';
 import 'package:rapport_intervention/models/app_settings.dart';
+import 'package:rapport_intervention/models/company.dart';
 import 'package:rapport_intervention/models/enums.dart';
 import 'package:rapport_intervention/screens/report_wizard_screen.dart';
 import 'package:rapport_intervention/services/pdf_service.dart';
@@ -12,8 +13,18 @@ import 'package:rapport_intervention/state/settings_provider.dart';
 import 'fake_storage.dart';
 
 /// Monte l'assistant de saisie sur un brouillon neuf, comme le fait l'accueil.
+///
+/// [technicien], quand il est donne, est enregistre dans les reglages avant
+/// l'ouverture : l'application est livree sans intervenant, chaque entreprise
+/// saisit les siens.
 Future<ReportsProvider> _pumpWizard(WidgetTester tester,
-    {required FakeStorage storage}) async {
+    {required FakeStorage storage, String? technicien}) async {
+  if (technicien != null) {
+    storage.json['settings.json'] = AppSettings.defaults
+        .copyWith(technicians: [Technician(name: technicien)])
+        .toJson();
+  }
+
   final settings = SettingsProvider(storage);
   final reports = ReportsProvider(storage);
   await settings.load();
@@ -138,7 +149,11 @@ void main() {
   });
 
   testWidgets('on peut cocher et décocher les intervenants', (tester) async {
-    final reports = await _pumpWizard(tester, storage: FakeStorage());
+    final reports = await _pumpWizard(
+      tester,
+      storage: FakeStorage(),
+      technicien: 'Thierry GROSSAT',
+    );
 
     // L'intervenant enregistré dans les réglages est coché d'avance.
     await _tap(tester, find.text('Thierry GROSSAT'));

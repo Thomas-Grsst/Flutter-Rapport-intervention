@@ -127,6 +127,7 @@ class _HomeScreenState extends State<HomeScreen> {
         children: [
           _searchBar(reports),
           _filterBar(reports),
+          _setupBanner(),
           Expanded(
             child: visible.isEmpty
                 ? _emptyState(reports)
@@ -149,6 +150,60 @@ class _HomeScreenState extends State<HomeScreen> {
                   ),
           ),
         ],
+      ),
+    );
+  }
+
+  /// Invitation à renseigner l'entreprise, tant qu'elle ne l'est pas.
+  ///
+  /// L'application est livrée vide : sans cette fiche, les rapports sortiraient
+  /// sans en-tête, sans logo et sans mentions légales — et on ne s'en
+  /// apercevrait qu'au moment d'envoyer le PDF au client.
+  Widget _setupBanner() {
+    final company = context.watch<SettingsProvider>().company;
+    if (company.name.trim().isNotEmpty) return const SizedBox.shrink();
+
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
+      child: Material(
+        color: const Color(0xFFFDF1DC),
+        borderRadius: BorderRadius.circular(12),
+        child: InkWell(
+          onTap: _openSettings,
+          borderRadius: BorderRadius.circular(12),
+          child: const Padding(
+            padding: EdgeInsets.all(14),
+            child: Row(
+              children: [
+                Icon(Icons.business_outlined,
+                    color: AppColors.warning, size: 22),
+                SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Renseignez votre entreprise',
+                        style: TextStyle(
+                          fontSize: 14.5,
+                          fontWeight: FontWeight.w700,
+                          color: AppColors.warning,
+                        ),
+                      ),
+                      SizedBox(height: 3),
+                      Text(
+                        'Nom, adresse, logo et mentions légales : ils '
+                        'apparaîtront sur tous vos rapports.',
+                        style: TextStyle(fontSize: 13, height: 1.35),
+                      ),
+                    ],
+                  ),
+                ),
+                Icon(Icons.chevron_right, color: AppColors.warning),
+              ],
+            ),
+          ),
+        ),
       ),
     );
   }

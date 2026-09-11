@@ -1,8 +1,8 @@
 name: rapport_intervention
 description: >-
-  Application mobile de saisie et de generation de rapports d'intervention
-  (assainissement, plomberie, maintenance) avec photos avant/pendant/apres,
-  signatures et export PDF.
+  Rapports d'intervention et d'entretien de poste de relevage, rediges sur le
+  chantier : etats releves, photos avant/apres, signatures et PDF mis en page.
+  Tout reste sur l'appareil, sans compte ni connexion.
 publish_to: "none"
 version: 1.0.0+1
 
@@ -57,7 +57,3 @@ flutter:
   # Roboto — Apache License 2.0, voir assets/fonts/LICENSE.txt
   assets:
     - assets/fonts/
-    # Logo affiché tant que l'utilisateur n'en a pas choisi un dans les
-    # réglages, pour que les rapports sortent en-tête complète dès la
-    # première ouverture.
-    - assets/images/

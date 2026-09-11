@@ -6,6 +6,13 @@ import 'package:rapport_intervention/state/reports_provider.dart';
 
 import 'fake_storage.dart';
 
+/// Les reglages d'une entreprise qui a choisi son prefixe.
+///
+/// L'application est livree sans prefixe : chaque entreprise met le sien dans
+/// les reglages, et le test se donne donc le sien.
+final AppSettings _settings =
+    AppSettings.defaults.copyWith(reportNumberPrefix: 'ASE');
+
 Future<ReportsProvider> _provider(FakeStorage storage) async {
   final provider = ReportsProvider(storage);
   await provider.load();
@@ -13,7 +20,7 @@ Future<ReportsProvider> _provider(FakeStorage storage) async {
 }
 
 Report _report(ReportsProvider provider, {required String clientName}) {
-  final draft = provider.createDraft(AppSettings.defaults)
+  final draft = provider.createDraft(_settings)
     ..clientName = clientName
     ..interventionDate = DateTime(2026, 3, 12);
   return draft;
@@ -26,7 +33,7 @@ void main() {
       final report = _report(provider, clientName: 'M. Manuel BLANC');
 
       expect(
-        provider.generateReportNumber(report, AppSettings.defaults),
+        provider.generateReportNumber(report, _settings),
         'ASE-120326-MB',
       );
     });
@@ -36,8 +43,20 @@ void main() {
       final report = _report(provider, clientName: 'SARL Dupont Immobilier');
 
       expect(
-        provider.generateReportNumber(report, AppSettings.defaults),
+        provider.generateReportNumber(report, _settings),
         'ASE-120326-DI',
+      );
+    });
+
+    test('se rabat sur RAP tant qu\'aucun préfixe n\'est choisi', () async {
+      // Les rapports doivent porter un numéro dès la première ouverture, même
+      // avant que l'entreprise ait été renseignée.
+      final provider = await _provider(FakeStorage());
+      final report = _report(provider, clientName: 'M. Manuel BLANC');
+
+      expect(
+        provider.generateReportNumber(report, AppSettings.defaults),
+        'RAP-120326-MB',
       );
     });
 
@@ -46,13 +65,13 @@ void main() {
 
       final first = _report(provider, clientName: 'M. Manuel BLANC');
       first.reportNumber =
-          provider.generateReportNumber(first, AppSettings.defaults);
+          provider.generateReportNumber(first, _settings);
       await provider.save(first);
 
       final second = _report(provider, clientName: 'Mme Marie BLANC');
 
       expect(
-        provider.generateReportNumber(second, AppSettings.defaults),
+        provider.generateReportNumber(second, _settings),
         'ASE-120326-MB-2',
       );
     });

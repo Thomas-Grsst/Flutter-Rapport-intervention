@@ -201,14 +201,36 @@ Dans un navigateur, ces mêmes entrées sont enregistrées dans le stockage loca
 plutôt que sur disque : les écrans manipulent des chemins sans savoir où les
 fichiers atterrissent réellement.
 
-## Personnalisation
+## Première ouverture
 
-Les valeurs livrées par défaut (entreprise, mentions légales, intervenant,
-types d'intervention, matériel, constats, actions) sont définies dans
-`AppSettings.defaults`, dans [`lib/models/app_settings.dart`](lib/models/app_settings.dart).
-Elles servent de point de départ et sont toutes modifiables depuis l'écran
-Réglages de l'application.
+L'application est livrée **vide de toute entreprise** : elle se télécharge sur
+une boutique et appartient à qui l'installe. Y laisser les coordonnées, le
+SIRET ou les intervenants de quelqu'un les distribuerait à tous ceux qui
+l'installent — et ses rapports sortiraient à l'en-tête d'une autre entreprise.
 
-Le logo de `assets/images/logo.png` est celui qui s'imprime tant qu'aucun
-n'a été choisi dans les réglages. En choisir un dans Réglages → Logo le
-remplace, sans toucher au fichier livré.
+Un bandeau sur l'accueil invite donc à remplir Réglages → Mon entreprise :
+nom, adresse, logo, mentions légales, intervenants et préfixe des numéros de
+rapport. Tout est ensuite repris automatiquement sur chaque rapport. Tant
+qu'aucun préfixe n'est choisi, les rapports sont numérotés `RAP-120326-MB`.
+
+Les listes de choix rapides, elles, sont livrées remplies — types
+d'intervention, matériel, constats, actions. Ce sont les gestes du métier,
+les mêmes d'une entreprise à l'autre ; elles se modifient depuis Réglages ou
+au fil de la saisie, et sont définies dans `AppSettings.defaults`
+([`lib/models/app_settings.dart`](lib/models/app_settings.dart)).
+
+## Publication
+
+Le dossier [`store/`](store/) contient tout ce que demande la console Google
+Play : la [fiche à copier-coller](store/fiche-play-store.md) (nom, description
+courte et complète, classification, sécurité des données, liste de contrôle
+avant envoi), la [politique de confidentialité](store/confidentialite.md) à
+publier à une URL publique, l'icône 512 × 512 et l'image mise en avant.
+
+L'icône de l'application est dessinée par
+[`tool/icone.py`](tool/icone.py), qui la décline dans toutes les tailles
+d'Android, d'iOS et du web :
+
+```bash
+python3 tool/icone.py
+```

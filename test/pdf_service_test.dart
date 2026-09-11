@@ -3,13 +3,13 @@ import 'dart:convert';
 import 'package:flutter/services.dart' show rootBundle;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:pdf/pdf.dart' show TtfParser;
-import 'package:rapport_intervention/models/app_settings.dart';
 import 'package:rapport_intervention/models/company.dart';
 import 'package:rapport_intervention/models/enums.dart';
 import 'package:rapport_intervention/models/report.dart';
 import 'package:rapport_intervention/services/pdf_service.dart';
 
 import 'fake_storage.dart';
+import 'sample_company.dart';
 
 /// Le rapport d'exemple du modele papier, utilise comme cas de reference.
 Report _blancReport() => Report(
@@ -66,7 +66,7 @@ void main() {
     test('produit un PDF valide', () async {
       final bytes = await PdfService(FakeStorage()).buildReportPdf(
         report: _blancReport(),
-        company: AppSettings.defaults.company,
+        company: sampleCompany,
       );
 
       expect(utf8.decode(bytes.sublist(0, 5)), '%PDF-');
@@ -97,7 +97,7 @@ void main() {
 
       final saved = await PdfService(storage).saveReportPdf(
         report: report,
-        company: AppSettings.defaults.company,
+        company: sampleCompany,
       );
 
       expect(saved.fileName, 'Rapport_ASE-120326-MB_M-Manuel-BLANC.pdf');
@@ -122,10 +122,24 @@ void main() {
 
       final bytes = await PdfService(FakeStorage()).buildReportPdf(
         report: report,
-        company: AppSettings.defaults.company,
+        company: sampleCompany,
       );
 
       expect(utf8.decode(bytes.sublist(0, 5)), '%PDF-');
+    });
+
+    test('génère le PDF avant même que l\'entreprise soit renseignée',
+        () async {
+      // L'application est livrée sans entreprise et sans logo : la mise en
+      // page doit tenir debout dès la première ouverture, sinon le premier
+      // rapport de l'utilisateur planterait.
+      final bytes = await PdfService(FakeStorage()).buildReportPdf(
+        report: _blancReport(),
+        company: const Company(),
+      );
+
+      expect(utf8.decode(bytes.sublist(0, 5)), '%PDF-');
+      expect(latin1.decode(bytes).trimRight(), endsWith('%%EOF'));
     });
 
     test('génère aussi le PDF d\'un rapport à peine commencé', () async {
@@ -137,7 +151,7 @@ void main() {
 
       final bytes = await PdfService(FakeStorage()).buildReportPdf(
         report: draft,
-        company: AppSettings.defaults.company,
+        company: sampleCompany,
       );
 
       expect(utf8.decode(bytes.sublist(0, 5)), '%PDF-');

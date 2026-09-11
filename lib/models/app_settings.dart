@@ -32,26 +32,18 @@ class AppSettings {
   /// Prefixe des numeros de rapport, ex. "ASE" -> ASE-120326-MB.
   final String reportNumberPrefix;
 
-  /// Reglages livres avec l'application : ils correspondent au rapport
-  /// d'exemple et servent de point de depart modifiable.
+  /// Reglages livres avec l'application.
+  ///
+  /// Aucune entreprise, aucun intervenant : l'application s'installe depuis
+  /// une boutique et appartient a celui qui la telecharge. Sa fiche
+  /// entreprise, ses intervenants et son prefixe de numerotation se
+  /// renseignent une fois pour toutes dans les reglages, a la premiere
+  /// ouverture.
+  ///
+  /// Les listes de choix rapides, elles, sont livrees remplies : ce sont les
+  /// gestes du metier, les memes d'une entreprise a l'autre, et elles restent
+  /// entierement modifiables.
   static AppSettings get defaults => const AppSettings(
-        company: Company(
-          legalForm: 'SASU',
-          name: "AU SERVICE DE L'EAU",
-          addressLine: '164, Route de Lyon',
-          postalCode: '01600',
-          city: 'TREVOUX',
-          phone: '06 50 36 50 00',
-          email: 'contact@auservicedeleau.fr',
-          siret: '91345781800015',
-          ape: '3700Z',
-          rcs: 'BOURG EN BRESSE B 913 457 818',
-          vatNumber: 'FR82913457818',
-          capital: '2 000,00 €',
-        ),
-        technicians: <Technician>[
-          Technician(name: 'Thierry GROSSAT', phone: '06 50 36 50 00'),
-        ],
         interventionTypes: <String>[
           'Entretien poste de relevage',
           'Débouchage canalisation',
@@ -89,7 +81,6 @@ class AppSettings {
           'Remise en service de la pompe',
           'Rinçage des canalisations',
         ],
-        reportNumberPrefix: 'ASE',
       );
 
   AppSettings copyWith({

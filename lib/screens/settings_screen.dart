@@ -4,7 +4,6 @@ import 'package:provider/provider.dart';
 
 import '../models/app_settings.dart';
 import '../models/company.dart';
-import '../services/pdf_service.dart';
 import '../state/settings_provider.dart';
 import '../theme.dart';
 import '../widgets/app_text_field.dart';
@@ -181,7 +180,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
               child: AppTextField(
                 initialValue: _company.name,
                 label: "Nom de l'entreprise",
-                hint: 'AU SERVICE DE…',
+                hint: 'Ex. : MARTIN ASSAINISSEMENT',
                 textCapitalization: TextCapitalization.characters,
                 onChanged: (value) =>
                     _updateCompany((c) => c.copyWith(name: value)),
@@ -193,7 +192,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
         AppTextField(
           initialValue: _company.addressLine,
           label: 'Adresse du siège',
-          hint: 'Ex. : 164, Route de Lyon',
+          hint: 'Ex. : 12, Rue des Ateliers',
           prefixIcon: Icons.home_outlined,
           onChanged: (value) =>
               _updateCompany((c) => c.copyWith(addressLine: value)),
@@ -244,7 +243,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
         AppTextField(
           initialValue: _draft.reportNumberPrefix,
           label: 'Préfixe des numéros de rapport',
-          hint: 'Ex. : ASE',
+          hint: 'Vos initiales, ex. : MA',
           textCapitalization: TextCapitalization.characters,
           onChanged: (value) => setState(() {
             _draft = _draft.copyWith(reportNumberPrefix: value);
@@ -275,7 +274,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
         AppTextField(
           initialValue: _company.siret,
           label: 'SIRET',
-          hint: 'Ex. : 91345781800015',
+          hint: '14 chiffres',
           keyboardType: TextInputType.number,
           onChanged: (value) => _updateCompany((c) => c.copyWith(siret: value)),
         ),
@@ -283,7 +282,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
         AppTextField(
           initialValue: _company.ape,
           label: 'Code APE',
-          hint: 'Ex. : 3700Z',
+          hint: 'Ex. : 3700Z — Collecte et traitement des eaux usées',
           textCapitalization: TextCapitalization.characters,
           onChanged: (value) => _updateCompany((c) => c.copyWith(ape: value)),
         ),
@@ -291,7 +290,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
         AppTextField(
           initialValue: _company.rcs,
           label: 'RCS',
-          hint: 'Ex. : BOURG EN BRESSE B 913 457 818',
+          hint: 'Ville et numéro d\'immatriculation',
           textCapitalization: TextCapitalization.characters,
           onChanged: (value) => _updateCompany((c) => c.copyWith(rcs: value)),
         ),
@@ -299,7 +298,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
         AppTextField(
           initialValue: _company.vatNumber,
           label: 'N° TVA intracommunautaire',
-          hint: 'Ex. : FR82913457818',
+          hint: 'FR + 11 caractères',
           textCapitalization: TextCapitalization.characters,
           onChanged: (value) =>
               _updateCompany((c) => c.copyWith(vatNumber: value)),
@@ -366,7 +365,13 @@ class _SettingsScreenState extends State<SettingsScreen> {
               child: MediaImage(
                 path: path,
                 fit: BoxFit.contain,
-                fallbackAsset: PdfService.defaultLogoAsset,
+                placeholder: const Center(
+                  child: Icon(
+                    Icons.add_photo_alternate_outlined,
+                    color: AppColors.brandLight,
+                    size: 30,
+                  ),
+                ),
               ),
             ),
             const SizedBox(width: 16),

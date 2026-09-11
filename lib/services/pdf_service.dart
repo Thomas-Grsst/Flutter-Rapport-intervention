@@ -68,9 +68,6 @@ class PdfService {
   /// La police du corps du rapport.
   static const String regularFontAsset = 'assets/fonts/Roboto-Regular.ttf';
 
-  /// Logo utilisé tant qu'aucun n'a été choisi dans les réglages.
-  static const String defaultLogoAsset = 'assets/images/logo.png';
-
   Future<pw.Font> _font(String asset) async =>
       pw.Font.ttf(await rootBundle.load(asset));
 
@@ -186,13 +183,12 @@ class PdfService {
     return bytes == null ? null : pw.MemoryImage(bytes);
   }
 
-  /// Le logo choisi dans les réglages, sinon celui livré avec l'application.
-  Future<pw.MemoryImage?> _logo(Company company) async {
-    final chosen = await _image(company.logoPath);
-    if (chosen != null) return chosen;
-    final asset = await rootBundle.load(defaultLogoAsset);
-    return pw.MemoryImage(asset.buffer.asUint8List());
-  }
+  /// Le logo choisi dans les réglages, s'il y en a un.
+  ///
+  /// L'application ne livre aucun logo : elle appartient à qui l'installe, et
+  /// un logo d'emprunt sur ses rapports serait pire que pas de logo du tout.
+  /// La mise en page se passe très bien du sien.
+  Future<pw.MemoryImage?> _logo(Company company) => _image(company.logoPath);
 
   // --- Page de garde --------------------------------------------------------
 
