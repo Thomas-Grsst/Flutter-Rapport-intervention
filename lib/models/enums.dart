@@ -1,3 +1,29 @@
+/// Les deux sortes de rapports que l'application produit.
+///
+/// Elles ne se remplissent pas de la meme facon : l'intervention est libre —
+/// on decrit ce qu'on a trouve et ce qu'on a fait —, tandis que l'entretien
+/// d'un poste de relevage suit un controle immuable, section par section.
+enum ReportKind {
+  intervention("Rapport d'intervention", 'Intervention'),
+  posteRelevage(
+    'Rapport de poste de relevage',
+    'Entretien poste de relevage',
+  );
+
+  const ReportKind(this.documentTitle, this.label);
+
+  /// Titre du document imprime.
+  final String documentTitle;
+
+  /// Intitule propose dans l'application.
+  final String label;
+
+  static ReportKind fromName(String? name) => ReportKind.values.firstWhere(
+        (kind) => kind.name == name,
+        orElse: () => ReportKind.intervention,
+      );
+}
+
 /// Statut d'avancement d'un rapport, tel qu'il apparait dans la section
 /// "Conclusions" du rapport papier (TERMINE / A SUIVRE / ...).
 enum ReportStatus {

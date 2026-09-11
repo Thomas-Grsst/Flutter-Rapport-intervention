@@ -10,6 +10,7 @@ import '../models/enums.dart';
 import '../models/photo_group.dart';
 import '../models/photo_item.dart';
 import '../models/report.dart';
+import 'relevage_pdf.dart';
 import 'storage_service.dart';
 
 /// Un PDF généré : son contenu, son nom de fichier et l'endroit où il a été
@@ -87,11 +88,23 @@ class PdfService {
     }
 
     final doc = pw.Document(
-      title: 'Rapport d\'intervention ${report.reportNumber}'.trim(),
+      title: '${report.kind.documentTitle} ${report.reportNumber}'.trim(),
       author: company.displayName,
       subject: report.displayTitle,
       theme: await _theme,
     );
+
+    if (report.kind == ReportKind.posteRelevage) {
+      doc.addPage(
+        _relevagePages(
+          report: report,
+          company: company,
+          logo: logo,
+          photoImages: photoImages,
+        ),
+      );
+      return doc.save();
+    }
 
     doc.addPage(_coverPage(report: report, company: company, logo: logo));
     doc.addPage(
@@ -106,6 +119,28 @@ class PdfService {
     );
 
     return doc.save();
+  }
+
+  /// Le rapport d'entretien de poste de relevage, qui suit un gabarit figé et
+  /// ne porte ni pied de page ni pagination — comme le modèle de référence.
+  pw.MultiPage _relevagePages({
+    required Report report,
+    required Company company,
+    required Map<String, pw.MemoryImage> photoImages,
+    pw.MemoryImage? logo,
+  }) {
+    const layout = RelevagePdfLayout(brandDark: brandDark);
+
+    return pw.MultiPage(
+      pageFormat: PdfPageFormat.a4,
+      margin: const pw.EdgeInsets.fromLTRB(45, 40, 45, 40),
+      build: (context) => layout.build(
+        report: report,
+        company: company,
+        photoImages: photoImages,
+        logo: logo,
+      ),
+    );
   }
 
   /// Génère le PDF et l'enregistre dans le dossier "rapports" de

@@ -1,12 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
+import '../models/enums.dart';
 import '../models/report.dart';
 import '../state/reports_provider.dart';
 import '../state/settings_provider.dart';
 import '../theme.dart';
 import '../widgets/report_card.dart';
 import 'report_detail_screen.dart';
+import 'relevage_wizard_screen.dart';
 import 'report_wizard_screen.dart';
 import 'settings_screen.dart';
 
@@ -27,14 +29,59 @@ class _HomeScreenState extends State<HomeScreen> {
     super.dispose();
   }
 
+  /// Demande d'abord quelle sorte de rapport : les deux ne se remplissent pas
+  /// de la même façon, et l'assistant n'est pas le même.
   Future<void> _createReport() async {
+    final kind = await showModalBottomSheet<ReportKind>(
+      context: context,
+      builder: (sheetContext) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Padding(
+              padding: EdgeInsets.fromLTRB(20, 18, 20, 6),
+              child: Align(
+                alignment: Alignment.centerLeft,
+                child: Text(
+                  'Quel rapport ?',
+                  style: TextStyle(
+                    fontSize: 17,
+                    fontWeight: FontWeight.w700,
+                    color: AppColors.brandDark,
+                  ),
+                ),
+              ),
+            ),
+            ListTile(
+              leading: const Icon(Icons.water_drop_outlined),
+              title: Text(ReportKind.posteRelevage.label),
+              subtitle: const Text('Contrôle complet, section par section'),
+              onTap: () =>
+                  Navigator.of(sheetContext).pop(ReportKind.posteRelevage),
+            ),
+            ListTile(
+              leading: const Icon(Icons.build_outlined),
+              title: Text(ReportKind.intervention.label),
+              subtitle: const Text('Débouchage, curage, dépannage ponctuel'),
+              onTap: () =>
+                  Navigator.of(sheetContext).pop(ReportKind.intervention),
+            ),
+          ],
+        ),
+      ),
+    );
+
+    if (kind == null || !mounted) return;
+
     final settings = context.read<SettingsProvider>().settings;
     final reports = context.read<ReportsProvider>();
-    final draft = reports.createDraft(settings);
+    final draft = reports.createDraft(settings, kind: kind);
 
     final saved = await Navigator.of(context).push<Report>(
       MaterialPageRoute(
-        builder: (_) => ReportWizardScreen(report: draft, isNew: true),
+        builder: (_) => kind == ReportKind.posteRelevage
+            ? RelevageWizardScreen(report: draft, isNew: true)
+            : ReportWizardScreen(report: draft, isNew: true),
       ),
     );
 

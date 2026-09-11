@@ -1,16 +1,20 @@
 # Rapport d'intervention
 
 Application mobile Flutter qui permet à un intervenant de saisir un rapport
-d'intervention depuis son téléphone, sur le chantier, et d'en générer le PDF
-mis en page — sans passer par Word.
+depuis son téléphone, sur le chantier, et d'en générer le PDF mis en page —
+sans passer par Word.
 
-Le PDF produit reprend la structure du modèle papier de référence : page de
-garde, blocs client / entreprise / adresse d'intervention, observations,
-matériel mis en œuvre, constats et actions, photographies, conclusions,
-points restants, récapitulatif d'intervention, évaluation du client et
-signatures.
+## Deux modèles de rapport
 
-## Le principe
+Le type se choisit au moment de créer le rapport ; l'assistant et le PDF
+s'adaptent ensuite tout seuls.
+
+| Modèle | Quand | Ce qu'il produit |
+|---|---|---|
+| **Rapport d'intervention** | Une intervention ponctuelle, dont le contenu change à chaque fois | Le modèle papier de référence : blocs client / entreprise / adresse d'intervention, observations, matériel mis en œuvre, constats et actions, photographies, conclusions, points restants, récapitulatif, évaluation du client et signatures |
+| **Entretien poste de relevage** | La visite d'entretien contractuelle | Un gabarit figé : bandeau du contrat, bloc client, puis les huit sections du poste, chacune avec ses états relevés et ses photos |
+
+## Le rapport d'intervention
 
 L'intervenant ne remplit pas un document : il répond à une série de questions
 courtes, réparties en sept étapes.
@@ -28,11 +32,33 @@ courtes, réparties en sept étapes.
 L'application se charge ensuite de la mise en page, du logo, des coordonnées,
 du pied de page et de la pagination.
 
+## Le rapport d'entretien de poste de relevage
+
+Celui-là ne varie jamais : les mêmes sections, dans le même ordre, avec les
+mêmes intitulés. Seuls changent le client, le lieu, les états relevés et les
+photos. Le gabarit est donc écrit en dur dans
+[`lib/models/relevage_template.dart`](lib/models/relevage_template.dart), et
+l'assistant le déroule section par section — une étape par section, dans
+l'ordre où l'intervenant fait le tour de l'installation.
+
+| Étape | Ce qu'on demande |
+|---|---|
+| 1. Le client | Nom, adresse, téléphone, e-mail, intervenants |
+| 2. Le poste | Date du contrat de maintenance, marque et type du poste |
+| 3 à 9. Les sections | Environnement, cuve, clapet anti-retour, flotteurs, pompe(s), coffret électrique, exutoire |
+| 10. Observations | Ce que le client doit savoir, en texte libre |
+
+Chaque point de contrôle se coche d'un geste — **Excellent**, **Correct** ou
+**À remplacer** (**Oui** / **Non** pour l'alarme avant entretien) — et reste
+précisable en toutes lettres juste à côté. Chaque section porte ses propres
+photos, imprimées deux par ligne sous son bandeau.
+
 ## Fonctionnalités
 
-- **Saisie guidée** en sept étapes, enregistrée automatiquement à chaque
-  changement d'étape : un rapport peut être commencé sur le chantier et
-  terminé plus tard.
+- **Deux modèles de rapport**, choisis à la création : l'intervention ponctuelle
+  et l'entretien de poste de relevage, qui suit un gabarit figé.
+- **Saisie guidée**, enregistrée automatiquement à chaque changement d'étape :
+  un rapport peut être commencé sur le chantier et terminé plus tard.
 - **Cases à cocher configurables** pour le matériel, les constats et les
   actions. Une saisie libre (« Autre… ») est mémorisée et proposée sur les
   rapports suivants.
@@ -126,19 +152,22 @@ lib/
 ├── app.dart                   MaterialApp, chargement initial
 ├── theme.dart                 Charte graphique (bleu #104C7E / #8FB8E8)
 ├── models/                    Report, PhotoGroup, PhotoItem, Company, AppSettings
+│   └── relevage_template.dart Le gabarit figé du poste de relevage
 ├── services/
 │   ├── storage_service.dart      Interface de stockage
 │   ├── storage_service_io.dart   Fichiers, sur téléphone
 │   ├── storage_service_web.dart  Stockage du navigateur
 │   ├── media_store_web.dart      Photos du navigateur (IndexedDB)
-│   └── pdf_service.dart          Génération du PDF mis en page
+│   ├── pdf_service.dart          Génération du PDF mis en page
+│   └── relevage_pdf.dart         Mise en page du poste de relevage
 ├── state/                     ReportsProvider, SettingsProvider
 ├── screens/
-│   ├── home_screen.dart       Liste, recherche, filtres
-│   ├── report_wizard_screen.dart   Assistant de saisie
-│   ├── report_detail_screen.dart   Fiche et export PDF
+│   ├── home_screen.dart       Liste, recherche, filtres, choix du modèle
+│   ├── report_wizard_screen.dart     Assistant du rapport d'intervention
+│   ├── relevage_wizard_screen.dart   Assistant du poste de relevage
+│   ├── report_detail_screen.dart     Fiche et export PDF
 │   ├── settings_screen.dart   Entreprise, intervenants, listes
-│   └── steps/                 Les sept étapes de l'assistant
+│   └── steps/                 Les étapes des deux assistants
 └── widgets/                   Composants réutilisables
 ```
 

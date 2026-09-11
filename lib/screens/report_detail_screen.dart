@@ -5,6 +5,7 @@ import 'package:provider/provider.dart';
 import 'package:share_plus/share_plus.dart';
 
 import '../models/enums.dart';
+import '../models/relevage_template.dart';
 import '../models/report.dart';
 import '../services/pdf_service.dart';
 import '../state/reports_provider.dart';
@@ -13,6 +14,7 @@ import '../theme.dart';
 import '../widgets/media_image.dart';
 import '../widgets/section_card.dart';
 import '../widgets/status_chip.dart';
+import 'relevage_wizard_screen.dart';
 import 'report_wizard_screen.dart';
 
 /// Fiche complète d'un rapport, avec génération et envoi du PDF.
@@ -30,10 +32,17 @@ class _ReportDetailScreenState extends State<ReportDetailScreen> {
 
   bool _generating = false;
 
-  Future<void> _edit(Report report) async {
-    await Navigator.of(context).push(
-      MaterialPageRoute(builder: (_) => ReportWizardScreen(report: report)),
+  /// Ouvre l'assistant correspondant à la sorte du rapport.
+  Route<Report> _wizardRoute(Report report, {bool isNew = false}) {
+    return MaterialPageRoute<Report>(
+      builder: (_) => report.kind == ReportKind.posteRelevage
+          ? RelevageWizardScreen(report: report, isNew: isNew)
+          : ReportWizardScreen(report: report, isNew: isNew),
     );
+  }
+
+  Future<void> _edit(Report report) async {
+    await Navigator.of(context).push(_wizardRoute(report));
   }
 
   Future<void> _delete(Report report) async {
@@ -67,11 +76,7 @@ class _ReportDetailScreenState extends State<ReportDetailScreen> {
   Future<void> _duplicate(Report report) async {
     final reports = context.read<ReportsProvider>();
     final copy = reports.duplicate(report);
-    await Navigator.of(context).push(
-      MaterialPageRoute(
-        builder: (_) => ReportWizardScreen(report: copy, isNew: true),
-      ),
-    );
+    await Navigator.of(context).push(_wizardRoute(copy, isNew: true));
   }
 
   /// Génère le PDF puis propose de le prévisualiser, l'imprimer ou l'envoyer.
@@ -194,49 +199,163 @@ class _ReportDetailScreenState extends State<ReportDetailScreen> {
       ),
       body: ListView(
         padding: const EdgeInsets.fromLTRB(16, 16, 16, 24),
+        children: report.kind == ReportKind.posteRelevage
+            ? _relevageCards(report)
+            : _interventionCards(report),
+      ),
+      bottomNavigationBar: _actionBar(report),
+    );
+  }
+
+  /// Les cartes d'un rapport d'intervention.
+  List<Widget> _interventionCards(Report report) {
+    return [
+      _summaryCard(report),
+      const SizedBox(height: 12),
+      _addressCard(report),
+      if (report.observations.trim().isNotEmpty ||
+          report.accessConstraints.trim().isNotEmpty) ...[
+        const SizedBox(height: 12),
+        SectionCard(
+          title: 'Observations',
+          icon: Icons.visibility_outlined,
+          children: [
+            InfoParagraph(text: report.observations),
+            if (report.accessConstraints.trim().isNotEmpty) ...[
+              const SizedBox(height: 10),
+              InfoLine(
+                label: "Contrainte d'accès",
+                value: report.accessConstraints,
+              ),
+            ],
+          ],
+        ),
+      ],
+      if (report.materials.isNotEmpty) ...[
+        const SizedBox(height: 12),
+        SectionCard(
+          title: 'Matériel mis en œuvre',
+          icon: Icons.build_outlined,
+          children: [InfoParagraph(text: '${report.materials.join(', ')}.')],
+        ),
+      ],
+      const SizedBox(height: 12),
+      _findingsCard(report),
+      if (report.photos.isNotEmpty) ...[
+        const SizedBox(height: 12),
+        _photosCard(report),
+      ],
+      const SizedBox(height: 12),
+      _conclusionCard(report),
+      const SizedBox(height: 12),
+      _signatureCard(report),
+    ];
+  }
+
+  /// Les cartes d'un rapport d'entretien de poste de relevage : le poste, le
+  /// client, puis une carte par section du gabarit.
+  List<Widget> _relevageCards(Report report) {
+    return [
+      SectionCard(
+        title: report.displayTitle,
+        icon: Icons.water_drop_outlined,
+        trailing: StatusChip(status: report.status),
         children: [
-          _summaryCard(report),
-          const SizedBox(height: 12),
-          _addressCard(report),
-          if (report.observations.trim().isNotEmpty ||
-              report.accessConstraints.trim().isNotEmpty) ...[
-            const SizedBox(height: 12),
-            SectionCard(
-              title: 'Observations',
-              icon: Icons.visibility_outlined,
-              children: [
-                InfoParagraph(text: report.observations),
-                if (report.accessConstraints.trim().isNotEmpty) ...[
-                  const SizedBox(height: 10),
-                  InfoLine(
-                    label: "Contrainte d'accès",
-                    value: report.accessConstraints,
-                  ),
-                ],
-              ],
-            ),
-          ],
-          if (report.materials.isNotEmpty) ...[
-            const SizedBox(height: 12),
-            SectionCard(
-              title: 'Matériel mis en œuvre',
-              icon: Icons.build_outlined,
-              children: [InfoParagraph(text: '${report.materials.join(', ')}.')],
-            ),
-          ],
-          const SizedBox(height: 12),
-          _findingsCard(report),
-          if (report.photos.isNotEmpty) ...[
-            const SizedBox(height: 12),
-            _photosCard(report),
-          ],
-          const SizedBox(height: 12),
-          _conclusionCard(report),
-          const SizedBox(height: 12),
-          _signatureCard(report),
+          InfoLine(
+            label: 'Date',
+            value: _dateFormat.format(report.interventionDate),
+          ),
+          InfoLine(label: 'N° rapport', value: report.reportNumber),
+          InfoLine(label: 'Marque', value: report.equipmentBrand),
+          InfoLine(label: 'Type', value: report.equipmentType),
+          InfoLine(
+            label: 'Contrat du',
+            value: report.contractDate == null
+                ? ''
+                : _dateFormat.format(report.contractDate!),
+          ),
+          InfoLine(
+            label: report.technicians.length > 1
+                ? 'Intervenants'
+                : 'Intervenant',
+            value: report.techniciansLine,
+          ),
         ],
       ),
-      bottomNavigationBar: SafeArea(
+      const SizedBox(height: 12),
+      SectionCard(
+        title: 'Client',
+        icon: Icons.place_outlined,
+        children: [
+          InfoLine(label: 'Client', value: report.clientName),
+          InfoLine(
+            label: 'Adresse',
+            value: [report.clientAddressLine, report.clientCityLine]
+                .where((line) => line.trim().isNotEmpty)
+                .join('\n'),
+          ),
+          InfoLine(label: 'Téléphone', value: report.clientPhone),
+          InfoLine(label: 'E-mail', value: report.clientEmail),
+        ],
+      ),
+      for (final section in relevageSections) ...[
+        const SizedBox(height: 12),
+        _relevageSectionCard(report, section),
+      ],
+    ];
+  }
+
+  Widget _relevageSectionCard(Report report, RelevageSection section) {
+    final photos = report.photoGroups
+        .where((group) => group.id == section.id)
+        .expand((group) => group.photos)
+        .toList();
+    final freeText =
+        section.hasFreeText ? report.checklistValue(section.id) : '';
+
+    return SectionCard(
+      title: section.title,
+      icon: Icons.checklist_outlined,
+      children: [
+        for (final field in section.fields)
+          InfoLine(
+            label: field.label,
+            value: report.checklistValue(section.keyOf(field)),
+          ),
+        if (section.hasFreeText)
+          InfoParagraph(
+            text: freeText,
+            emptyLabel: 'Aucune observation.',
+          ),
+        if (photos.isNotEmpty) ...[
+          const SizedBox(height: 8),
+          SizedBox(
+            height: 84,
+            child: ListView.separated(
+              scrollDirection: Axis.horizontal,
+              itemCount: photos.length,
+              separatorBuilder: (_, __) => const SizedBox(width: 8),
+              itemBuilder: (context, index) => ClipRRect(
+                borderRadius: BorderRadius.circular(10),
+                child: SizedBox(
+                  width: 84,
+                  height: 84,
+                  child: MediaImage(path: photos[index].filePath),
+                ),
+              ),
+            ),
+          ),
+        ] else if (section.fields.isEmpty && !section.hasFreeText)
+          const Text(
+            'Aucune photo.',
+            style: TextStyle(fontSize: 13.5, color: Color(0xFF8A97A3)),
+          ),
+      ],
+    );
+  }
+
+  Widget _actionBar(Report report) {
+    return SafeArea(
         minimum: const EdgeInsets.fromLTRB(16, 8, 16, 12),
         child: Row(
           children: [
@@ -266,7 +385,6 @@ class _ReportDetailScreenState extends State<ReportDetailScreen> {
             ),
           ],
         ),
-      ),
     );
   }
 

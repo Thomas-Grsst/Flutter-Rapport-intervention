@@ -17,6 +17,7 @@ class Report {
     required this.id,
     required this.createdAt,
     required this.updatedAt,
+    this.kind = ReportKind.intervention,
     this.reportNumber = '',
     this.reference = '',
     this.interventionType = '',
@@ -28,6 +29,12 @@ class Report {
     this.clientAddressLine = '',
     this.clientPostalCode = '',
     this.clientCity = '',
+    this.clientPhone = '',
+    this.clientEmail = '',
+    this.contractDate,
+    this.equipmentBrand = '',
+    this.equipmentType = '',
+    Map<String, String>? checklist,
     this.siteAddressLine = '',
     this.sitePostalCode = '',
     this.siteCity = '',
@@ -56,11 +63,16 @@ class Report {
         materials = materials ?? <String>[],
         findingTags = findingTags ?? <String>[],
         actions = actions ?? <String>[],
+        checklist = checklist ?? <String, String>{},
         photoGroups = photoGroups ?? <PhotoGroup>[];
 
   final String id;
   final DateTime createdAt;
   DateTime updatedAt;
+
+  /// Ce que le rapport raconte : une intervention ponctuelle, ou l'entretien
+  /// d'un poste de relevage. Chaque sorte a son assistant et son PDF.
+  final ReportKind kind;
 
   // --- Identification -------------------------------------------------------
   String reportNumber;
@@ -80,6 +92,23 @@ class Report {
   String clientAddressLine;
   String clientPostalCode;
   String clientCity;
+  String clientPhone;
+  String clientEmail;
+
+  // --- Poste de relevage ----------------------------------------------------
+  //
+  // Renseignes seulement sur un rapport d'entretien de poste de relevage.
+
+  /// Date du contrat de maintenance.
+  DateTime? contractDate;
+
+  String equipmentBrand;
+  String equipmentType;
+
+  /// Les etats releves, section par section, ranges sous les cles du gabarit
+  /// (voir RelevageSection.keyOf). Le texte libre des observations y figure
+  /// sous la cle de sa section.
+  Map<String, String> checklist;
 
   // --- Adresse d'intervention ----------------------------------------------
   String siteAddressLine;
@@ -128,9 +157,16 @@ class Report {
 
   // --- Champs derives -------------------------------------------------------
 
-  String get displayTitle => interventionType.trim().isNotEmpty
-      ? interventionType.trim()
-      : 'Rapport sans intitule';
+  String get displayTitle {
+    if (interventionType.trim().isNotEmpty) return interventionType.trim();
+    if (kind == ReportKind.posteRelevage) {
+      final poste = [equipmentBrand.trim(), equipmentType.trim()]
+          .where((part) => part.isNotEmpty)
+          .join(' ');
+      return poste.isEmpty ? 'Entretien poste de relevage' : poste;
+    }
+    return 'Rapport sans intitule';
+  }
 
   String get displayClient =>
       clientName.trim().isNotEmpty ? clientName.trim() : 'Client non renseigne';
@@ -173,10 +209,47 @@ class Report {
   List<PhotoGroup> get filledPhotoGroups =>
       photoGroups.where((group) => !group.isEmpty).toList();
 
+  // --- Poste de relevage ----------------------------------------------------
+
+  /// L'etat releve pour un champ du gabarit, vide tant qu'il n'a rien recu.
+  String checklistValue(String key) => checklist[key]?.trim() ?? '';
+
+  void setChecklistValue(String key, String value) {
+    if (value.trim().isEmpty) {
+      checklist.remove(key);
+    } else {
+      checklist[key] = value.trim();
+    }
+  }
+
+  /// Le lot de photos d'une section du gabarit, cree au besoin.
+  ///
+  /// Les sections reutilisent les lots de photos, avec l'identifiant de la
+  /// section comme identifiant de lot : le rapport de poste de relevage n'a
+  /// donc pas de rangement a lui.
+  PhotoGroup photoGroupFor(String sectionId, {required String title}) {
+    for (final group in photoGroups) {
+      if (group.id == sectionId) return group;
+    }
+    final group = PhotoGroup(id: sectionId, label: title);
+    photoGroups.add(group);
+    return group;
+  }
+
   /// Sections encore vides, affichees comme rappel avant de generer le PDF.
   List<String> get missingSections {
     final missing = <String>[];
     if (clientName.trim().isEmpty) missing.add('Nom du client');
+
+    if (kind == ReportKind.posteRelevage) {
+      if (clientAddressLine.trim().isEmpty) missing.add('Adresse du client');
+      if (equipmentType.trim().isEmpty) missing.add('Type de poste');
+      if (techniciansLine.isEmpty) missing.add('Intervenant');
+      if (checklist.isEmpty) missing.add('États relevés');
+      if (photos.isEmpty) missing.add('Photos');
+      return missing;
+    }
+
     if (siteAddressLine.trim().isEmpty) missing.add("Adresse d'intervention");
     if (interventionType.trim().isEmpty) missing.add("Type d'intervention");
     if (techniciansLine.isEmpty) missing.add('Intervenant');
@@ -212,6 +285,13 @@ class Report {
         'clientAddressLine': clientAddressLine,
         'clientPostalCode': clientPostalCode,
         'clientCity': clientCity,
+        'clientPhone': clientPhone,
+        'clientEmail': clientEmail,
+        'kind': kind.name,
+        'contractDate': contractDate?.toIso8601String(),
+        'equipmentBrand': equipmentBrand,
+        'equipmentType': equipmentType,
+        'checklist': checklist,
         'siteAddressLine': siteAddressLine,
         'sitePostalCode': sitePostalCode,
         'siteCity': siteCity,
@@ -291,6 +371,17 @@ class Report {
       clientAddressLine: json['clientAddressLine'] as String? ?? '',
       clientPostalCode: json['clientPostalCode'] as String? ?? '',
       clientCity: json['clientCity'] as String? ?? '',
+      clientPhone: json['clientPhone'] as String? ?? '',
+      clientEmail: json['clientEmail'] as String? ?? '',
+      kind: ReportKind.fromName(json['kind'] as String?),
+      contractDate: json['contractDate'] == null
+          ? null
+          : DateTime.parse(json['contractDate'] as String),
+      equipmentBrand: json['equipmentBrand'] as String? ?? '',
+      equipmentType: json['equipmentType'] as String? ?? '',
+      checklist: (json['checklist'] as Map<String, dynamic>? ??
+              const <String, dynamic>{})
+          .map((key, value) => MapEntry(key, value.toString())),
       siteAddressLine: json['siteAddressLine'] as String? ?? '',
       sitePostalCode: json['sitePostalCode'] as String? ?? '',
       siteCity: json['siteCity'] as String? ?? '',

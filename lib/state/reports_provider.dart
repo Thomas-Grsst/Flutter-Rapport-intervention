@@ -112,7 +112,10 @@ class ReportsProvider extends ChangeNotifier {
   /// Crée un brouillon pré-rempli avec les informations de l'entreprise et
   /// l'intervenant enregistré, pour que l'utilisateur démarre avec le moins
   /// de champs vides possible.
-  Report createDraft(AppSettings settings) {
+  Report createDraft(
+    AppSettings settings, {
+    ReportKind kind = ReportKind.intervention,
+  }) {
     final now = DateTime.now();
     final technician =
         settings.technicians.isNotEmpty ? settings.technicians.first : null;
@@ -121,6 +124,9 @@ class ReportsProvider extends ChangeNotifier {
       id: _uuid.v4(),
       createdAt: now,
       updatedAt: now,
+      kind: kind,
+      interventionType:
+          kind == ReportKind.posteRelevage ? 'Entretien poste de relevage' : '',
       interventionDate: now,
       technicians: [if (technician != null) technician],
       documentsToTransmit: "Rapport d'intervention",
@@ -168,6 +174,7 @@ class ReportsProvider extends ChangeNotifier {
       'updatedAt': now.toIso8601String(),
       'interventionDate': now.toIso8601String(),
       'photoGroups': <dynamic>[],
+      'checklist': <String, dynamic>{},
       'status': ReportStatus.brouillon.name,
       'reportNumber': '',
       'clientSignaturePath': null,
