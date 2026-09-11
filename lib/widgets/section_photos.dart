@@ -11,11 +11,12 @@ import '../theme.dart';
 import 'media_image.dart';
 import 'preset_chips.dart';
 
-/// Les photos d'une section, en simple grille.
+/// Les photos d'une section : celles d'avant, puis celles d'apres.
 ///
-/// Contrairement aux lots d'un rapport d'intervention, le rapport d'entretien
-/// de poste de relevage ne classe pas ses photos en avant / pendant / apres :
-/// chaque section a les siennes, dans l'ordre ou elles ont ete prises.
+/// Chaque moment accepte autant de photos qu'il en faut, et peut rester vide —
+/// un avant n'appelle pas forcement un apres, et l'inverse non plus. Le
+/// rapport imprime ensuite les avant sur une rangee et les apres juste en
+/// dessous.
 class SectionPhotos extends StatefulWidget {
   const SectionPhotos({
     super.key,
@@ -37,18 +38,20 @@ class _SectionPhotosState extends State<SectionPhotos> {
   static const int _quality = 82;
 
   final ImagePicker _picker = ImagePicker();
-  bool _busy = false;
+  PhotoStage? _busyStage;
+
+  bool get _busy => _busyStage != null;
 
   void _update(VoidCallback change) {
     setState(change);
     widget.onChanged();
   }
 
-  Future<void> _addPhotos(ImageSource source) async {
+  Future<void> _addPhotos(ImageSource source, PhotoStage stage) async {
     final storage = context.read<StorageService>();
     final reports = context.read<ReportsProvider>();
 
-    setState(() => _busy = true);
+    setState(() => _busyStage = stage);
     try {
       final picked = <XFile>[];
       if (source == ImageSource.camera) {
@@ -69,9 +72,7 @@ class _SectionPhotosState extends State<SectionPhotos> {
 
       for (final file in picked) {
         final stored = await storage.importMedia(file.path, prefix: 'photo');
-        widget.group.photos.add(
-          reports.buildPhoto(stored, PhotoStage.autre),
-        );
+        widget.group.photos.add(reports.buildPhoto(stored, stage));
       }
     } on Exception catch (error) {
       if (mounted) {
@@ -81,13 +82,13 @@ class _SectionPhotosState extends State<SectionPhotos> {
       }
     } finally {
       if (mounted) {
-        setState(() => _busy = false);
+        setState(() => _busyStage = null);
         widget.onChanged();
       }
     }
   }
 
-  Future<void> _pickSource() async {
+  Future<void> _pickSource(PhotoStage stage) async {
     final source = await showModalBottomSheet<ImageSource>(
       context: context,
       builder: (sheetContext) => SafeArea(
@@ -109,7 +110,7 @@ class _SectionPhotosState extends State<SectionPhotos> {
       ),
     );
 
-    if (source != null && mounted) await _addPhotos(source);
+    if (source != null && mounted) await _addPhotos(source, stage);
   }
 
   Future<void> _editPhoto(PhotoItem photo) async {
@@ -163,10 +164,26 @@ class _SectionPhotosState extends State<SectionPhotos> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
+        _stage('Avant', PhotoStage.avant),
+        const SizedBox(height: 16),
+        _stage('Après', PhotoStage.apres),
+      ],
+    );
+  }
+
+  /// Les photos d'un moment, avec leur compteur et la tuile pour en ajouter.
+  Widget _stage(String title, PhotoStage stage) {
+    // Les photos des rapports enregistrés avant l'avant / après rejoignent la
+    // rangée « Avant » : elles restent ainsi modifiables et supprimables.
+    final photos = widget.group.inColumn(stage);
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
         Row(
           children: [
             Text(
-              widget.label,
+              title,
               style: const TextStyle(
                 fontSize: 15,
                 fontWeight: FontWeight.w700,
@@ -175,10 +192,10 @@ class _SectionPhotosState extends State<SectionPhotos> {
             ),
             const SizedBox(width: 8),
             Text(
-              '${widget.group.photos.length}',
+              '${photos.length}',
               style: const TextStyle(fontSize: 13, color: Color(0xFF8A97A3)),
             ),
-            if (_busy) ...[
+            if (_busyStage == stage) ...[
               const SizedBox(width: 10),
               const SizedBox(
                 width: 14,
@@ -193,8 +210,8 @@ class _SectionPhotosState extends State<SectionPhotos> {
           spacing: 10,
           runSpacing: 10,
           children: [
-            for (final photo in widget.group.photos) _thumbnail(photo),
-            _addTile(),
+            for (final photo in photos) _thumbnail(photo),
+            _addTile(title, stage),
           ],
         ),
       ],
@@ -234,12 +251,12 @@ class _SectionPhotosState extends State<SectionPhotos> {
     );
   }
 
-  Widget _addTile() {
+  Widget _addTile(String title, PhotoStage stage) {
     return Semantics(
       button: true,
-      label: 'Ajouter une photo — ${widget.label}',
+      label: 'Ajouter une photo $title — ${widget.label}',
       child: InkWell(
-        onTap: _busy ? null : _pickSource,
+        onTap: _busy ? null : () => _pickSource(stage),
         borderRadius: BorderRadius.circular(10),
         child: Container(
           width: 96,

@@ -3,6 +3,8 @@ import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:pdf/pdf.dart' show PdfColors;
+import 'package:pdf/widgets.dart' as pw;
 import 'package:provider/provider.dart';
 import 'package:rapport_intervention/models/app_settings.dart';
 import 'package:rapport_intervention/models/company.dart';
@@ -12,6 +14,7 @@ import 'package:rapport_intervention/models/relevage_template.dart';
 import 'package:rapport_intervention/models/report.dart';
 import 'package:rapport_intervention/screens/relevage_wizard_screen.dart';
 import 'package:rapport_intervention/services/pdf_service.dart';
+import 'package:rapport_intervention/services/relevage_pdf.dart';
 import 'package:rapport_intervention/services/storage_service.dart';
 import 'package:rapport_intervention/state/reports_provider.dart';
 import 'package:rapport_intervention/state/settings_provider.dart';
@@ -258,6 +261,91 @@ void main() {
 
       expect(name, 'Rapport_ASE-110926-AL_Association-La-Roseraie.pdf');
     });
+
+    test('met en page toutes les combinaisons d\'avant et d\'après', () async {
+      // Un avant n'appelle pas forcement un apres, et l'inverse non plus : la
+      // mise en page doit tenir dans tous les cas, y compris quand une rangee
+      // manque tout a fait ou deborde de la largeur de la page.
+      for (final counts in const <List<int>>[
+        [1, 0], // que des avant
+        [0, 1], // que des apres
+        [1, 1],
+        [3, 1], // une rangee moins fournie que l'autre
+        [1, 3],
+        [5, 4], // plus que la largeur d'une rangee
+      ]) {
+        final storage = FakeStorage();
+        final report = _relevageReport();
+        final group = report.photoGroupFor('cuve', title: 'Cuve');
+
+        var n = 0;
+        void add(int howMany, PhotoStage stage) {
+          for (var i = 0; i < howMany; i++) {
+            final path = 'media/p${n++}.png';
+            storage.files[path] = Uint8List.fromList(_onePixelPng);
+            group.photos
+                .add(PhotoItem(id: path, filePath: path, stage: stage));
+          }
+        }
+
+        add(counts[0], PhotoStage.avant);
+        add(counts[1], PhotoStage.apres);
+
+        final bytes = await PdfService(storage).buildReportPdf(
+          report: report,
+          company: AppSettings.defaults.company,
+        );
+
+        expect(utf8.decode(bytes.sublist(0, 5)), '%PDF-',
+            reason: '${counts[0]} avant / ${counts[1]} après');
+      }
+    });
+
+    test('ne laisse jamais « Après » seul en bas d\'une page', () {
+      // Le titre d'un moment et sa première rangée forment un bloc insécable :
+      // sans cela la page se tourne juste entre les deux, et le rapport
+      // annonce un « Après » que rien ne suit.
+      final images = <String, pw.MemoryImage>{};
+      final photos = <PhotoItem>[];
+      for (var i = 0; i < 4; i++) {
+        images['p$i'] = pw.MemoryImage(Uint8List.fromList(_onePixelPng));
+        photos.add(PhotoItem(id: 'p$i', filePath: 'media/p$i.png'));
+      }
+
+      final rows = const RelevagePdfLayout(brandDark: PdfColors.blue)
+          .photoRows(photos.sublist(0, 2), photos.sublist(2), images);
+
+      // Deux blocs insécables : « Avant » et « Après », chacun avec sa rangée.
+      expect(rows.whereType<pw.Inseparable>(), hasLength(2));
+      expect(rows.first, isA<pw.Inseparable>());
+    });
+
+    test('imprime encore les photos des rapports d\'avant l\'avant/après',
+        () async {
+      // Celles-la n'ont pas de moment : elles rejoignent la rangee « Avant »
+      // plutot que de disparaitre du rapport.
+      final storage = FakeStorage();
+      storage.files['media/vieille.png'] = Uint8List.fromList(_onePixelPng);
+
+      final report = _relevageReport();
+      report.photoGroupFor('exutoire', title: 'Exutoire').photos.add(
+            PhotoItem(id: 'v1', filePath: 'media/vieille.png'),
+          );
+
+      expect(
+        report.photoGroups
+            .firstWhere((group) => group.id == 'exutoire')
+            .inColumn(PhotoStage.avant),
+        hasLength(1),
+      );
+
+      final bytes = await PdfService(storage).buildReportPdf(
+        report: report,
+        company: AppSettings.defaults.company,
+      );
+
+      expect(utf8.decode(bytes.sublist(0, 5)), '%PDF-');
+    });
   });
 
   group('assistant du poste de relevage', () {
@@ -297,6 +385,18 @@ void main() {
           'À remplacer');
       // Un etat releve suffit a sortir le rapport du brouillon.
       expect(saved.status, ReportStatus.enCours);
+    });
+
+    testWidgets('chaque section propose un avant et un après', (tester) async {
+      await _pumpRelevageWizard(tester, storage: FakeStorage());
+
+      await _next(tester); // Le poste
+      await _next(tester); // Environnement
+
+      expect(find.text('Avant'), findsOneWidget);
+      expect(find.text('Après'), findsOneWidget);
+      // Chaque moment a sa propre tuile d'ajout.
+      expect(find.text('Ajouter'), findsNWidgets(2));
     });
 
     testWidgets('la dernière étape rappelle ce qui reste à compléter',

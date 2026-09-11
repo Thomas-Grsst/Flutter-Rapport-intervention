@@ -5,6 +5,7 @@ import 'package:provider/provider.dart';
 import 'package:share_plus/share_plus.dart';
 
 import '../models/enums.dart';
+import '../models/photo_item.dart';
 import '../models/relevage_template.dart';
 import '../models/report.dart';
 import '../services/pdf_service.dart';
@@ -306,10 +307,13 @@ class _ReportDetailScreenState extends State<ReportDetailScreen> {
   }
 
   Widget _relevageSectionCard(Report report, RelevageSection section) {
-    final photos = report.photoGroups
-        .where((group) => group.id == section.id)
-        .expand((group) => group.photos)
-        .toList();
+    final avant = <PhotoItem>[];
+    final apres = <PhotoItem>[];
+    for (final group in report.photoGroups) {
+      if (group.id != section.id) continue;
+      avant.addAll(group.inColumn(PhotoStage.avant));
+      apres.addAll(group.ofStage(PhotoStage.apres));
+    }
     final freeText =
         section.hasFreeText ? report.checklistValue(section.id) : '';
 
@@ -327,29 +331,51 @@ class _ReportDetailScreenState extends State<ReportDetailScreen> {
             text: freeText,
             emptyLabel: 'Aucune observation.',
           ),
-        if (photos.isNotEmpty) ...[
-          const SizedBox(height: 8),
-          SizedBox(
-            height: 84,
-            child: ListView.separated(
-              scrollDirection: Axis.horizontal,
-              itemCount: photos.length,
-              separatorBuilder: (_, __) => const SizedBox(width: 8),
-              itemBuilder: (context, index) => ClipRRect(
-                borderRadius: BorderRadius.circular(10),
-                child: SizedBox(
-                  width: 84,
-                  height: 84,
-                  child: MediaImage(path: photos[index].filePath),
-                ),
-              ),
-            ),
-          ),
-        ] else if (section.fields.isEmpty && !section.hasFreeText)
+        if (avant.isNotEmpty) _photoStrip('Avant', avant),
+        if (apres.isNotEmpty) _photoStrip('Après', apres),
+        if (avant.isEmpty &&
+            apres.isEmpty &&
+            section.fields.isEmpty &&
+            !section.hasFreeText)
           const Text(
             'Aucune photo.',
             style: TextStyle(fontSize: 13.5, color: Color(0xFF8A97A3)),
           ),
+      ],
+    );
+  }
+
+  /// Une rangée de vignettes, sous le nom de son moment.
+  Widget _photoStrip(String title, List<PhotoItem> photos) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const SizedBox(height: 10),
+        Text(
+          title,
+          style: const TextStyle(
+            fontSize: 13,
+            fontWeight: FontWeight.w700,
+            color: AppColors.brandDark,
+          ),
+        ),
+        const SizedBox(height: 6),
+        SizedBox(
+          height: 84,
+          child: ListView.separated(
+            scrollDirection: Axis.horizontal,
+            itemCount: photos.length,
+            separatorBuilder: (_, __) => const SizedBox(width: 8),
+            itemBuilder: (context, index) => ClipRRect(
+              borderRadius: BorderRadius.circular(10),
+              child: SizedBox(
+                width: 84,
+                height: 84,
+                child: MediaImage(path: photos[index].filePath),
+              ),
+            ),
+          ),
+        ),
       ],
     );
   }

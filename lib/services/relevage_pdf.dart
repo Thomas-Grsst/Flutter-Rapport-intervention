@@ -1,8 +1,10 @@
+import 'package:flutter/foundation.dart' show visibleForTesting;
 import 'package:intl/intl.dart';
 import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
 
 import '../models/company.dart';
+import '../models/enums.dart';
 import '../models/photo_item.dart';
 import '../models/relevage_template.dart';
 import '../models/report.dart';
@@ -141,21 +143,27 @@ class RelevagePdfLayout {
         'E-Mail : « ${report.clientEmail.trim()} »',
     ];
 
-    return pw.Column(
-      children: [
-        for (final line in lines)
-          pw.Padding(
-            padding: const pw.EdgeInsets.symmetric(vertical: 3),
-            child: pw.Text(
-              line,
-              textAlign: pw.TextAlign.center,
-              style: const pw.TextStyle(
-                fontSize: 11,
-                fontWeight: pw.FontWeight.bold,
+    // Pleine largeur : une colonne se resserre par defaut sur sa ligne la plus
+    // longue, et le bloc entier se posait alors a gauche de la page — centre
+    // sur lui-meme, mais pas sur la feuille.
+    return pw.Container(
+      width: double.infinity,
+      child: pw.Column(
+        children: [
+          for (final line in lines)
+            pw.Padding(
+              padding: const pw.EdgeInsets.symmetric(vertical: 3),
+              child: pw.Text(
+                line,
+                textAlign: pw.TextAlign.center,
+                style: const pw.TextStyle(
+                  fontSize: 11,
+                  fontWeight: pw.FontWeight.bold,
+                ),
               ),
             ),
-          ),
-      ],
+        ],
+      ),
     );
   }
 
@@ -181,19 +189,26 @@ class RelevagePdfLayout {
     final freeText =
         section.hasFreeText ? report.checklistValue(section.id) : '';
 
-    final photos = <PhotoItem>[
-      for (final group in report.photoGroups)
-        if (group.id == section.id)
-          for (final photo in group.photos)
-            if (images.containsKey(photo.id)) photo,
-    ];
+    final avant = <PhotoItem>[];
+    final apres = <PhotoItem>[];
+    for (final group in report.photoGroups) {
+      if (group.id != section.id) continue;
+      // Une photo dont le fichier a disparu ne compte pas : l'imprimer
+      // laisserait un cadre vide au milieu de la section.
+      avant.addAll(group
+          .inColumn(PhotoStage.avant)
+          .where((photo) => images.containsKey(photo.id)));
+      apres.addAll(group
+          .ofStage(PhotoStage.apres)
+          .where((photo) => images.containsKey(photo.id)));
+    }
 
     // Une section entièrement vide n'est pas imprimée : elle ne dirait rien.
-    if (values.isEmpty && freeText.isEmpty && photos.isEmpty) {
+    if (values.isEmpty && freeText.isEmpty && avant.isEmpty && apres.isEmpty) {
       return const <pw.Widget>[];
     }
 
-    final rows = _photoRows(photos, images);
+    final rows = photoRows(avant, apres, images);
 
     return <pw.Widget>[
       pw.Inseparable(
@@ -251,52 +266,114 @@ class RelevagePdfLayout {
     );
   }
 
-  /// Les photos, deux par ligne — comme le modèle, qui les pose côte à côte.
-  List<pw.Widget> _photoRows(
-    List<PhotoItem> photos,
+  /// Au plus trois photos par ligne : au-delà, chacune devient trop petite
+  /// pour qu'on y distingue quoi que ce soit.
+  static const int _maxPerRow = 3;
+
+  /// Les photos d'une section : la rangée des « avant », puis celle des
+  /// « après » juste en dessous.
+  ///
+  /// Les deux rangées partagent le même nombre de colonnes, celui de la plus
+  /// fournie. Une photo d'après tombe ainsi sous une photo d'avant de même
+  /// largeur, même quand il y en a moins — et l'une des deux rangées peut
+  /// manquer tout à fait : tout ne se photographie pas deux fois.
+  @visibleForTesting
+  List<pw.Widget> photoRows(
+    List<PhotoItem> avant,
+    List<PhotoItem> apres,
     Map<String, pw.MemoryImage> images,
   ) {
-    final rows = <pw.Widget>[];
+    if (avant.isEmpty && apres.isEmpty) return const <pw.Widget>[];
 
-    for (var i = 0; i < photos.length; i += 2) {
-      final left = photos[i];
-      final right = i + 1 < photos.length ? photos[i + 1] : null;
+    final perRow =
+        (avant.length > apres.length ? avant.length : apres.length)
+            .clamp(1, _maxPerRow);
+
+    return <pw.Widget>[
+      ..._stageRows('Avant', avant, perRow, images),
+      ..._stageRows('Après', apres, perRow, images),
+    ];
+  }
+
+  /// Les lignes d'un moment — « Avant » ou « Après » — précédées de son titre.
+  List<pw.Widget> _stageRows(
+    String title,
+    List<PhotoItem> photos,
+    int perRow,
+    Map<String, pw.MemoryImage> images,
+  ) {
+    if (photos.isEmpty) return const <pw.Widget>[];
+
+    final height = perRow == 1
+        ? 195.0
+        : perRow == 2
+            ? 150.0
+            : 115.0;
+
+    final rows = <pw.Widget>[];
+    for (var start = 0; start < photos.length; start += perRow) {
+      final slice = photos.sublist(
+        start,
+        start + perRow > photos.length ? photos.length : start + perRow,
+      );
 
       rows.add(
         pw.Padding(
           padding: const pw.EdgeInsets.only(bottom: 8),
           child: pw.Row(
-            mainAxisAlignment: pw.MainAxisAlignment.center,
             crossAxisAlignment: pw.CrossAxisAlignment.start,
-            children: right == null
-                // Une photo seule se pose au milieu de la page, et non collée
-                // à gauche avec un blanc à droite.
-                ? [
-                    pw.Spacer(),
-                    pw.Expanded(flex: 2, child: _photo(left, images[left.id]!)),
-                    pw.Spacer(),
-                  ]
-                : [
-                    pw.Expanded(child: _photo(left, images[left.id]!)),
-                    pw.SizedBox(width: 8),
-                    pw.Expanded(child: _photo(right, images[right.id]!)),
-                  ],
+            children: [
+              for (var column = 0; column < perRow; column++) ...[
+                if (column > 0) pw.SizedBox(width: 8),
+                // Les colonnes vides de fin de ligne gardent leur place :
+                // c'est ce qui aligne les « après » sous les « avant ».
+                pw.Expanded(
+                  child: column < slice.length
+                      ? _photo(slice[column], images[slice[column].id]!, height)
+                      : pw.SizedBox(),
+                ),
+              ],
+            ],
           ),
         ),
       );
     }
 
-    return rows;
+    // Le titre part avec sa première rangée : « Après » seul en bas d'une page
+    // ne voudrait rien dire. Sans Inseparable, une colonne se coupe entre ses
+    // enfants et c'est exactement là que la page se serait tournée.
+    return <pw.Widget>[
+      pw.Inseparable(
+        child: pw.Column(
+          crossAxisAlignment: pw.CrossAxisAlignment.start,
+          children: [
+            pw.Padding(
+              padding: const pw.EdgeInsets.only(bottom: 4),
+              child: pw.Text(
+                title,
+                style: pw.TextStyle(
+                  fontSize: 10,
+                  fontWeight: pw.FontWeight.bold,
+                  color: brandDark,
+                ),
+              ),
+            ),
+            rows.first,
+          ],
+        ),
+      ),
+      ...rows.skip(1),
+    ];
   }
 
-  pw.Widget _photo(PhotoItem photo, pw.MemoryImage image) {
+  pw.Widget _photo(PhotoItem photo, pw.MemoryImage image, double height) {
     return pw.Column(
       crossAxisAlignment: pw.CrossAxisAlignment.center,
       children: [
         // La photo entière, sans rognage : un cadrage automatique couperait
         // justement ce que l'intervenant a voulu montrer.
         pw.Container(
-          height: 190,
+          height: height,
           width: double.infinity,
           child: pw.Image(image, fit: pw.BoxFit.contain),
         ),

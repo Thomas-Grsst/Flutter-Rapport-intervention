@@ -50,8 +50,13 @@ l'ordre où l'intervenant fait le tour de l'installation.
 
 Chaque point de contrôle se coche d'un geste — **Excellent**, **Correct** ou
 **À remplacer** (**Oui** / **Non** pour l'alarme avant entretien) — et reste
-précisable en toutes lettres juste à côté. Chaque section porte ses propres
-photos, imprimées deux par ligne sous son bandeau.
+précisable en toutes lettres juste à côté.
+
+Chaque section porte ses propres photos, en deux temps : un **avant** et un
+**après**, autant de photos que nécessaire dans chacun. Le rapport imprime les
+« avant » sur une rangée et les « après » juste en dessous, à la même largeur,
+si bien qu'une photo d'après tombe sous celle d'avant à laquelle elle répond.
+L'un des deux temps peut manquer : tout ne se photographie pas deux fois.
 
 ## Fonctionnalités
 
