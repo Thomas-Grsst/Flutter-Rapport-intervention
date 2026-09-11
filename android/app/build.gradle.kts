@@ -7,7 +7,10 @@ plugins {
 android {
     namespace = "fr.auservicedeleau.rapport_intervention"
     compileSdk = flutter.compileSdkVersion
-    ndkVersion = flutter.ndkVersion
+    // Pas de `ndkVersion` : l'application ne compile aucun code natif, et
+    // aucune de ses dépendances non plus. L'exiger poussait Gradle à
+    // télécharger le NDK à chaque compilation — plusieurs gigaoctets, et un
+    // échec net sur un poste dont le sdkmanager ne sait pas l'installer.
 
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_17

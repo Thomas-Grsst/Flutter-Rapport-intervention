@@ -29,6 +29,12 @@ dependencies:
   # path_provider n'a pas d'implementation web : il n'est importe que par le
   # stockage sur fichiers, choisi par import conditionnel sur mobile.
   path_provider: ^2.1.4
+  # Son implementation Android est bornee avant 2.3.0 : a partir de la, elle
+  # passe par le paquet `jni`, qui compile du C++ et reclame donc le NDK
+  # Android. Gradle tente alors de le telecharger a chaque compilation, et la
+  # construction de l'APK echoue sur un poste dont le sdkmanager ne le fait
+  # pas — pour du code qui n'a besoin que du chemin du dossier documents.
+  path_provider_android: ">=2.2.0 <2.3.0"
 
   # Lecture d'un fichier choisi par l'utilisateur, quelle que soit la
   # plateforme (chemin sur mobile, URL de blob dans un navigateur).
