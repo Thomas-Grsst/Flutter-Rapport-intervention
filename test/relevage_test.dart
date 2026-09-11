@@ -6,7 +6,6 @@ import 'package:flutter_test/flutter_test.dart';
 
 import 'package:pdf/widgets.dart' as pw;
 import 'package:provider/provider.dart';
-import 'package:rapport_intervention/models/app_settings.dart';
 import 'package:rapport_intervention/models/company.dart';
 import 'package:rapport_intervention/models/enums.dart';
 import 'package:rapport_intervention/models/photo_item.dart';
@@ -20,6 +19,7 @@ import 'package:rapport_intervention/state/reports_provider.dart';
 import 'package:rapport_intervention/state/settings_provider.dart';
 
 import 'fake_storage.dart';
+import 'sample_company.dart';
 
 /// Un PNG rouge de 1 pixel : de quoi donner une vraie image a la mise en page
 /// sans embarquer de fichier dans les tests.
@@ -233,7 +233,7 @@ void main() {
 
       final bytes = await PdfService(storage).buildReportPdf(
         report: report,
-        company: AppSettings.defaults.company,
+        company: sampleCompany,
       );
 
       expect(utf8.decode(bytes.sublist(0, 5)), '%PDF-');
@@ -250,7 +250,7 @@ void main() {
 
       final bytes = await PdfService(FakeStorage()).buildReportPdf(
         report: draft,
-        company: AppSettings.defaults.company,
+        company: sampleCompany,
       );
 
       expect(utf8.decode(bytes.sublist(0, 5)), '%PDF-');
@@ -293,7 +293,7 @@ void main() {
 
         final bytes = await PdfService(storage).buildReportPdf(
           report: report,
-          company: AppSettings.defaults.company,
+          company: sampleCompany,
         );
 
         expect(utf8.decode(bytes.sublist(0, 5)), '%PDF-',
@@ -320,6 +320,30 @@ void main() {
       expect(rows.first, isA<pw.Inseparable>());
     });
 
+    test('pose un avant et un après seuls sur la même ligne', () {
+      // Deux rangées d'une photo chacune se liraient mal et mangeraient une
+      // demi-page : côte à côte, la comparaison saute aux yeux.
+      final images = <String, pw.MemoryImage>{
+        for (var i = 0; i < 2; i++)
+          'p$i': pw.MemoryImage(Uint8List.fromList(_onePixelPng)),
+      };
+      final avant = [PhotoItem(id: 'p0', filePath: 'media/p0.png')];
+      final apres = [PhotoItem(id: 'p1', filePath: 'media/p1.png')];
+
+      const layout = RelevagePdfLayout();
+
+      expect(layout.photoRows(avant, apres, images), hasLength(1));
+      // Avec deux photos d'un côté, on revient à une rangée par moment.
+      expect(
+        layout.photoRows(
+          [...avant, PhotoItem(id: 'p1', filePath: 'media/p1.png')],
+          apres,
+          images,
+        ),
+        hasLength(2),
+      );
+    });
+
     test('imprime encore les photos des rapports d\'avant l\'avant/après',
         () async {
       // Celles-la n'ont pas de moment : elles rejoignent la rangee « Avant »
@@ -341,7 +365,7 @@ void main() {
 
       final bytes = await PdfService(storage).buildReportPdf(
         report: report,
-        company: AppSettings.defaults.company,
+        company: sampleCompany,
       );
 
       expect(utf8.decode(bytes.sublist(0, 5)), '%PDF-');

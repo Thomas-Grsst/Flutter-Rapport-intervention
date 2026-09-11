@@ -191,6 +191,10 @@ class RelevagePdfLayout {
   /// fournie. Une photo d'après tombe ainsi sous une photo d'avant de même
   /// largeur, même quand il y en a moins — et l'une des deux rangées peut
   /// manquer tout à fait : tout ne se photographie pas deux fois.
+  ///
+  /// Une seule photo de chaque côté fait exception : elles se posent côte à
+  /// côte sur une même ligne, l'avant puis l'après, ce qui les compare d'un
+  /// coup d'œil et évite deux rangées presque vides.
   @visibleForTesting
   List<pw.Widget> photoRows(
     List<PhotoItem> avant,
@@ -198,6 +202,10 @@ class RelevagePdfLayout {
     Map<String, pw.MemoryImage> images,
   ) {
     if (avant.isEmpty && apres.isEmpty) return const <pw.Widget>[];
+
+    if (avant.length == 1 && apres.length == 1) {
+      return <pw.Widget>[_pairRow(avant.single, apres.single, images)];
+    }
 
     final perRow = (avant.length > apres.length ? avant.length : apres.length)
         .clamp(1, _maxPerRow);
@@ -207,6 +215,53 @@ class RelevagePdfLayout {
       ..._stageRows('Après', apres, perRow, images),
     ];
   }
+
+  /// L'avant et l'après côte à côte, chacun sous son intitulé.
+  pw.Widget _pairRow(
+    PhotoItem avant,
+    PhotoItem apres,
+    Map<String, pw.MemoryImage> images,
+  ) {
+    pw.Widget cell(String title, PhotoItem photo) => pw.Column(
+          crossAxisAlignment: pw.CrossAxisAlignment.start,
+          children: [
+            pw.Padding(
+              padding: const pw.EdgeInsets.only(bottom: 5),
+              child: _stageLabel(title),
+            ),
+            PdfStyle.photoCard(
+              photo,
+              images[photo.id]!,
+              height: 140,
+              fit: pw.BoxFit.contain,
+              showStage: false,
+            ),
+          ],
+        );
+
+    return pw.Inseparable(
+      child: pw.Padding(
+        padding: const pw.EdgeInsets.only(bottom: 8),
+        child: pw.Row(
+          crossAxisAlignment: pw.CrossAxisAlignment.start,
+          children: [
+            pw.Expanded(child: cell('Avant', avant)),
+            pw.SizedBox(width: 10),
+            pw.Expanded(child: cell('Après', apres)),
+          ],
+        ),
+      ),
+    );
+  }
+
+  pw.Widget _stageLabel(String title) => pw.Text(
+        title,
+        style: const pw.TextStyle(
+          fontSize: 9.5,
+          fontWeight: pw.FontWeight.bold,
+          color: PdfStyle.brandDark,
+        ),
+      );
 
   /// Les rangées d'un moment — « Avant » ou « Après » — sous son intitulé.
   List<pw.Widget> _stageRows(
@@ -273,14 +328,7 @@ class RelevagePdfLayout {
           children: [
             pw.Padding(
               padding: const pw.EdgeInsets.only(bottom: 5),
-              child: pw.Text(
-                title,
-                style: const pw.TextStyle(
-                  fontSize: 9.5,
-                  fontWeight: pw.FontWeight.bold,
-                  color: PdfStyle.brandDark,
-                ),
-              ),
+              child: _stageLabel(title),
             ),
             rows.first,
           ],
