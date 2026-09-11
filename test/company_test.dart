@@ -68,24 +68,20 @@ void main() {
   });
 
   group('réglages livrés', () {
-    test('ne contiennent aucune entreprise ni aucun intervenant', () {
-      // L'application se télécharge sur une boutique : y laisser les
-      // coordonnées, le SIRET ou les intervenants de quelqu'un les
-      // distribuerait à tous ceux qui l'installent.
+    test('sortent un rapport complet sans rien configurer', () {
+      // L'application est distribuée en APK à l'entreprise qui l'utilise :
+      // sa fiche est livrée remplie, et le premier rapport porte son en-tête,
+      // ses mentions légales et son intervenant sans passer par les réglages.
       final settings = AppSettings.defaults;
 
-      expect(settings.company.name, isEmpty);
-      expect(settings.company.siret, isEmpty);
-      expect(settings.company.phone, isEmpty);
-      expect(settings.company.email, isEmpty);
-      expect(settings.company.logoPath, anyOf(isNull, isEmpty));
-      expect(settings.technicians, isEmpty);
-      expect(settings.reportNumberPrefix, isEmpty);
+      expect(settings.company.name, isNotEmpty);
+      expect(settings.company.siret, isNotEmpty);
+      expect(settings.company.legalLine, contains('SIRET'));
+      expect(settings.technicians, isNotEmpty);
+      expect(settings.reportNumberPrefix, isNotEmpty);
     });
 
-    test('proposent tout de même les gestes du métier', () {
-      // Ceux-là ne désignent personne : ils font gagner du temps dès la
-      // première ouverture, et restent modifiables.
+    test('proposent les gestes du métier', () {
       final settings = AppSettings.defaults;
 
       expect(settings.interventionTypes, isNotEmpty);

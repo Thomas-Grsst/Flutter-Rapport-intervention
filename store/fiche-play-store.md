@@ -1,5 +1,11 @@
 # Fiche Google Play
 
+> **L'application se diffuse aujourd'hui en APK, pas sur le Play Store.** Ce
+> dossier est gardé pour le jour où elle y serait publiée — et il faudrait
+> alors d'abord vider `AppSettings.defaults` et retirer `assets/images/`, sans
+> quoi la fiche et le logo de l'entreprise partiraient à tous ceux qui
+> l'installent. Voir la section « Personnalisation » du README.
+
 Tout ce que la console Play demande pour publier l'application, prêt à être
 copié-collé. Les visuels sont dans ce même dossier.
 

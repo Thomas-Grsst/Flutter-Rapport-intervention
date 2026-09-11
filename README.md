@@ -201,36 +201,62 @@ Dans un navigateur, ces mêmes entrées sont enregistrées dans le stockage loca
 plutôt que sur disque : les écrans manipulent des chemins sans savoir où les
 fichiers atterrissent réellement.
 
-## Première ouverture
+## Personnalisation
 
-L'application est livrée **vide de toute entreprise** : elle se télécharge sur
-une boutique et appartient à qui l'installe. Y laisser les coordonnées, le
-SIRET ou les intervenants de quelqu'un les distribuerait à tous ceux qui
-l'installent — et ses rapports sortiraient à l'en-tête d'une autre entreprise.
+L'application est distribuée en APK à l'entreprise qui l'utilise : ses valeurs
+par défaut — fiche entreprise, mentions légales, intervenants, préfixe des
+numéros de rapport, types d'intervention, matériel, constats, actions — sont
+donc livrées remplies dans `AppSettings.defaults`
+([`lib/models/app_settings.dart`](lib/models/app_settings.dart)). Le premier
+rapport sort complet sans rien avoir à configurer, et tout reste modifiable
+depuis l'écran Réglages.
 
-Un bandeau sur l'accueil invite donc à remplir Réglages → Mon entreprise :
-nom, adresse, logo, mentions légales, intervenants et préfixe des numéros de
-rapport. Tout est ensuite repris automatiquement sur chaque rapport. Tant
-qu'aucun préfixe n'est choisi, les rapports sont numérotés `RAP-120326-MB`.
+Le logo de `assets/images/logo.png` s'imprime tant qu'aucun n'a été choisi
+dans les réglages. En choisir un dans Réglages → Logo le remplace, sans
+toucher au fichier livré.
 
-Les listes de choix rapides, elles, sont livrées remplies — types
-d'intervention, matériel, constats, actions. Ce sont les gestes du métier,
-les mêmes d'une entreprise à l'autre ; elles se modifient depuis Réglages ou
-au fil de la saisie, et sont définies dans `AppSettings.defaults`
-([`lib/models/app_settings.dart`](lib/models/app_settings.dart)).
+**Pour une autre entreprise**, il y a trois endroits à reprendre : les valeurs
+de `AppSettings.defaults`, le fichier `assets/images/logo.png`, et le nom de
+paquet `fr.auservicedeleau.rapport_intervention` (dans
+`android/app/build.gradle.kts`, `android/app/src/main/kotlin/…` et
+`ios/Runner.xcodeproj/project.pbxproj`). Un bandeau sur l'accueil invite à
+remplir Réglages → Mon entreprise si la fiche se retrouve vide ; sans préfixe,
+les rapports sont numérotés `RAP-120326-MB`.
 
-## Publication
+## Construire l'APK
 
-Le dossier [`store/`](store/) contient tout ce que demande la console Google
-Play : la [fiche à copier-coller](store/fiche-play-store.md) (nom, description
-courte et complète, classification, sécurité des données, liste de contrôle
-avant envoi), la [politique de confidentialité](store/confidentialite.md) à
-publier à une URL publique, l'icône 512 × 512 et l'image mise en avant.
+```bash
+flutter build apk --release
+```
 
-L'icône de l'application est dessinée par
-[`tool/icone.py`](tool/icone.py), qui la décline dans toutes les tailles
-d'Android, d'iOS et du web :
+Le fichier atterrit dans `build/app/outputs/flutter-apk/app-release.apk` :
+copiez-le sur le téléphone et ouvrez-le. Android demandera d'autoriser
+l'installation d'applications de cette source — c'est normal en dehors du
+Play Store.
+
+Un APK par architecture, plus léger à transférer :
+
+```bash
+flutter build apk --release --split-per-abi
+```
+
+Celui qui convient à la quasi-totalité des téléphones récents est
+`app-arm64-v8a-release.apk`.
+
+> Sans clé de signature configurée, Flutter signe l'APK avec sa clé de
+> débogage. Cela suffit pour installer l'application à la main, mais les mises
+> à jour ne s'installeront par-dessus que si la clé reste la même — gardez le
+> même poste pour compiler, ou [configurez une clé de
+> publication](https://docs.flutter.dev/deployment/android#signing-the-app).
+
+L'icône de l'application est dessinée par [`tool/icone.py`](tool/icone.py),
+qui la décline dans toutes les tailles d'Android, d'iOS et du web :
 
 ```bash
 python3 tool/icone.py
 ```
+
+Le dossier [`store/`](store/) garde de quoi publier sur Google Play le jour où
+ce serait utile : [fiche à copier-coller](store/fiche-play-store.md),
+[politique de confidentialité](store/confidentialite.md), icône 512 × 512 et
+image mise en avant. Ces fichiers ne servent à rien pour une diffusion en APK.

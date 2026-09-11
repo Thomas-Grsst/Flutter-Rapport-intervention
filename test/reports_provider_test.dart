@@ -7,9 +7,6 @@ import 'package:rapport_intervention/state/reports_provider.dart';
 import 'fake_storage.dart';
 
 /// Les reglages d'une entreprise qui a choisi son prefixe.
-///
-/// L'application est livree sans prefixe : chaque entreprise met le sien dans
-/// les reglages, et le test se donne donc le sien.
 final AppSettings _settings =
     AppSettings.defaults.copyWith(reportNumberPrefix: 'ASE');
 
@@ -48,14 +45,16 @@ void main() {
       );
     });
 
-    test('se rabat sur RAP tant qu\'aucun préfixe n\'est choisi', () async {
-      // Les rapports doivent porter un numéro dès la première ouverture, même
-      // avant que l'entreprise ait été renseignée.
+    test('se rabat sur RAP quand le préfixe est effacé', () async {
+      // Un rapport doit porter un numéro même si les réglages ont été vidés.
       final provider = await _provider(FakeStorage());
       final report = _report(provider, clientName: 'M. Manuel BLANC');
 
       expect(
-        provider.generateReportNumber(report, AppSettings.defaults),
+        provider.generateReportNumber(
+          report,
+          AppSettings.defaults.copyWith(reportNumberPrefix: ''),
+        ),
         'RAP-120326-MB',
       );
     });

@@ -57,3 +57,7 @@ flutter:
   # Roboto — Apache License 2.0, voir assets/fonts/LICENSE.txt
   assets:
     - assets/fonts/
+    # Logo imprimé tant que l'utilisateur n'en a pas choisi un dans les
+    # réglages, pour que les rapports sortent en-tête complète dès la
+    # première ouverture.
+    - assets/images/

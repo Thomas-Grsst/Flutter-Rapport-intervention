@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 
 import '../models/app_settings.dart';
 import '../models/company.dart';
+import '../services/pdf_service.dart';
 import '../state/settings_provider.dart';
 import '../theme.dart';
 import '../widgets/app_text_field.dart';
@@ -365,13 +366,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
               child: MediaImage(
                 path: path,
                 fit: BoxFit.contain,
-                placeholder: const Center(
-                  child: Icon(
-                    Icons.add_photo_alternate_outlined,
-                    color: AppColors.brandLight,
-                    size: 30,
-                  ),
-                ),
+                fallbackAsset: PdfService.defaultLogoAsset,
               ),
             ),
             const SizedBox(width: 16),
