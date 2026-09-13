@@ -423,6 +423,24 @@ void main() {
       expect(find.text('Ajouter'), findsNWidgets(2));
     });
 
+    testWidgets('le bouton Enregistrer sauvegarde sans quitter l\'assistant',
+        (tester) async {
+      final reports = await _pumpRelevageWizard(tester, storage: FakeStorage());
+
+      await tester.enterText(
+        find.widgetWithText(TextField, 'Ex. : Association La Roseraie'),
+        'Association La Roseraie',
+      );
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.widgetWithText(TextButton, 'Enregistrer'));
+      await tester.pumpAndSettle();
+
+      expect(reports.all.single.clientName, 'Association La Roseraie');
+      expect(find.text('Rapport enregistré'), findsOneWidget);
+      expect(find.text('Le client'), findsOneWidget);
+    });
+
     testWidgets('la dernière étape rappelle ce qui reste à compléter',
         (tester) async {
       await _pumpRelevageWizard(tester, storage: FakeStorage());

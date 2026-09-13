@@ -211,6 +211,27 @@ void main() {
     expect(reports.all.single.filledPhotoGroups, isEmpty);
   });
 
+  testWidgets('le bouton Enregistrer sauvegarde sans quitter l\'assistant',
+      (tester) async {
+    final storage = FakeStorage();
+    final reports = await _pumpWizard(tester, storage: storage);
+
+    await tester.enterText(
+      find.widgetWithText(TextField, 'Ex. : M. Manuel BLANC'),
+      'M. Manuel BLANC',
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.widgetWithText(TextButton, 'Enregistrer'));
+    await tester.pumpAndSettle();
+
+    expect(reports.all.single.clientName, 'M. Manuel BLANC');
+    expect(storage.json['reports.json'], isNotNull);
+    expect(find.text('Rapport enregistré'), findsOneWidget);
+    // On reste sur la première étape : enregistrer n'est pas quitter.
+    expect(find.text('Le chantier'), findsOneWidget);
+  });
+
   testWidgets('la dernière étape liste ce qui reste à compléter',
       (tester) async {
     await _pumpWizard(tester, storage: FakeStorage());

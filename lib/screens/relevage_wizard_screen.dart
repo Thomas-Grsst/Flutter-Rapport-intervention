@@ -70,6 +70,22 @@ class _RelevageWizardScreenState extends State<RelevageWizardScreen> {
     _dirty = false;
   }
 
+  /// Enregistre sans quitter l'assistant.
+  ///
+  /// Le rapport est déjà enregistré à chaque changement d'étape, mais rien ne
+  /// le disait : sur un chantier, on veut pouvoir ranger son téléphone au
+  /// milieu d'une saisie en étant sûr de ne rien perdre.
+  Future<void> _saveNow() async {
+    FocusScope.of(context).unfocus();
+    final messenger = ScaffoldMessenger.of(context);
+
+    await _persist();
+    if (!mounted) return;
+    messenger.showSnackBar(
+      const SnackBar(content: Text('Rapport enregistré')),
+    );
+  }
+
   Future<void> _goTo(int index) async {
     if (index < 0 || index >= _stepCount) return;
     FocusScope.of(context).unfocus();
@@ -149,6 +165,15 @@ class _RelevageWizardScreenState extends State<RelevageWizardScreen> {
           title: Text(widget.isNew
               ? 'Entretien poste de relevage'
               : 'Modifier le rapport'),
+          actions: [
+            TextButton(
+              onPressed: _saveNow,
+              child: const Text(
+                'Enregistrer',
+                style: TextStyle(color: Colors.white, fontSize: 15),
+              ),
+            ),
+          ],
           bottom: PreferredSize(
             preferredSize: const Size.fromHeight(4),
             child: LinearProgressIndicator(
