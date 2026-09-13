@@ -10,6 +10,7 @@ import '../models/enums.dart';
 import '../models/photo_group.dart';
 import '../models/photo_item.dart';
 import '../models/report.dart';
+import 'filtre_compact_pdf.dart';
 import 'pdf_style.dart';
 import 'relevage_pdf.dart';
 import 'storage_service.dart';
@@ -110,6 +111,20 @@ class PdfService {
       return doc.save();
     }
 
+    if (report.kind == ReportKind.filtreCompact) {
+      doc.addPage(
+        _filtreCompactPages(
+          report: report,
+          company: company,
+          logo: logo,
+          photoImages: photoImages,
+          clientSignature: clientSignature,
+          technicianSignature: technicianSignature,
+        ),
+      );
+      return doc.save();
+    }
+
     doc.addPage(
       _contentPages(
         report: report,
@@ -145,6 +160,33 @@ class PdfService {
         report: report,
         company: company,
         photoImages: photoImages,
+      ),
+    );
+  }
+
+  /// Le rapport d'entretien de filtre compact, posé dans les mêmes pages que
+  /// les autres rapports.
+  pw.MultiPage _filtreCompactPages({
+    required Report report,
+    required Company company,
+    required Map<String, pw.MemoryImage> photoImages,
+    pw.MemoryImage? logo,
+    pw.MemoryImage? clientSignature,
+    pw.MemoryImage? technicianSignature,
+  }) {
+    const layout = FiltreCompactPdfLayout();
+
+    return pw.MultiPage(
+      pageFormat: PdfPageFormat.a4,
+      margin: const pw.EdgeInsets.fromLTRB(45, 40, 45, 68),
+      header: (context) => _pageHeader(company, logo),
+      footer: (context) => _pageFooter(context, company),
+      build: (context) => layout.build(
+        report: report,
+        company: company,
+        photoImages: photoImages,
+        clientSignature: clientSignature,
+        technicianSignature: technicianSignature,
       ),
     );
   }
@@ -223,9 +265,7 @@ class PdfService {
   /// dessous nomme donc le poste lui-même, ce qui distingue deux rapports
   /// d'un même client.
   String _coverSubtitle(Report report) {
-    if (report.kind != ReportKind.posteRelevage) {
-      return report.displayTitle.toUpperCase();
-    }
+
     final poste = [report.equipmentBrand.trim(), report.equipmentType.trim()]
         .where((part) => part.isNotEmpty)
         .join(' ');
@@ -832,33 +872,9 @@ class PdfService {
     required String title,
     required String caption,
     pw.MemoryImage? signature,
-  }) {
-    return pw.Column(
-      crossAxisAlignment: pw.CrossAxisAlignment.start,
-      children: [
-        pw.Text(
-          title,
-          style: const pw.TextStyle(
-            fontSize: 9.5,
-            fontWeight: pw.FontWeight.bold,
-            color: brandDark,
-          ),
-        ),
-        pw.SizedBox(height: 5),
-        pw.Container(
-          height: 70,
-          width: double.infinity,
-          padding: const pw.EdgeInsets.all(4),
-          decoration: pw.BoxDecoration(border: pw.Border.all(color: lineGrey)),
-          child: signature == null
-              ? pw.SizedBox()
-              : pw.Image(signature, fit: pw.BoxFit.contain),
-        ),
-        pw.SizedBox(height: 5),
-        pw.Text(caption, style: const pw.TextStyle(fontSize: 8.5, color: textGrey)),
-      ],
-    );
-  }
+  }) =>
+      PdfStyle.signatureBox(
+          title: title, caption: caption, signature: signature);
 
   pw.Widget _legalNotice(Report report, Company company) {
     final name = company.name.isEmpty ? "l'entreprise" : company.name;

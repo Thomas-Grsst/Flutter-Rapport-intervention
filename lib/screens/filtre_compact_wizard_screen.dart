@@ -2,23 +2,26 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../models/enums.dart';
-import '../models/relevage_template.dart';
+import '../models/filtre_compact_template.dart';
 import '../models/report.dart';
 import '../state/reports_provider.dart';
 import '../state/settings_provider.dart';
 import '../theme.dart';
 import 'steps/step_entretien_client.dart';
-import 'steps/step_relevage_poste.dart';
-import 'steps/step_relevage_section.dart';
+import 'steps/step_filtre_installation.dart';
+import 'steps/step_filtre_section.dart';
+import 'steps/step_filtre_synthese.dart';
+import 'steps/step_signature.dart';
 
-/// Assistant de saisie d'un rapport d'entretien de poste de relevage.
+/// Assistant de saisie d'un rapport d'entretien de filtre compact.
 ///
 /// Le rapport ne varie jamais : l'assistant suit donc exactement le gabarit,
-/// une étape par section, dans l'ordre où l'intervenant fait le tour de
-/// l'installation — l'environnement, la cuve, le clapet, les flotteurs, les
-/// pompes, le coffret, l'exutoire, puis ses observations.
-class RelevageWizardScreen extends StatefulWidget {
-  const RelevageWizardScreen({
+/// une étape par section, dans l'ordre où l'intervenant descend
+/// l'installation — l'environnement, le regard amont, la fosse, le préfiltre,
+/// le média filtrant, la pompe, puis les regards des tranchées. La synthèse
+/// se remplit en dernier, une fois le tour fini.
+class FiltreCompactWizardScreen extends StatefulWidget {
+  const FiltreCompactWizardScreen({
     super.key,
     required this.report,
     this.isNew = false,
@@ -28,10 +31,10 @@ class RelevageWizardScreen extends StatefulWidget {
   final bool isNew;
 
   @override
-  State<RelevageWizardScreen> createState() => _RelevageWizardScreenState();
+  State<FiltreCompactWizardScreen> createState() => _FiltreCompactWizardScreenState();
 }
 
-class _RelevageWizardScreenState extends State<RelevageWizardScreen> {
+class _FiltreCompactWizardScreenState extends State<FiltreCompactWizardScreen> {
   late final Report _draft = widget.report.clone();
   late final PageController _pageController = PageController();
 
@@ -39,9 +42,9 @@ class _RelevageWizardScreenState extends State<RelevageWizardScreen> {
   bool _dirty = false;
   bool _savedAtLeastOnce = false;
 
-  /// Les deux premières étapes — le client, puis le poste — précèdent les
-  /// sections du gabarit.
-  int get _stepCount => 2 + relevageSections.length;
+  /// Le client et l'installation ouvrent le parcours, la synthèse puis les
+  /// signatures le ferment ; entre les deux viennent les sections du gabarit.
+  int get _stepCount => 4 + filtreSections.length;
 
   @override
   void dispose() {
@@ -163,7 +166,7 @@ class _RelevageWizardScreenState extends State<RelevageWizardScreen> {
             onPressed: _handleBack,
           ),
           title: Text(widget.isNew
-              ? 'Entretien poste de relevage'
+              ? 'Entretien filtre compact'
               : 'Modifier le rapport'),
           actions: [
             TextButton(
@@ -192,36 +195,46 @@ class _RelevageWizardScreenState extends State<RelevageWizardScreen> {
             _page(
               step: 0,
               title: 'Le client',
-              subtitle: 'À qui appartient le poste ?',
+              subtitle: 'À qui appartient l\'installation ?',
               child: EntretienClientStep(draft: _draft, onChanged: _markDirty),
             ),
             _page(
               step: 1,
-              title: 'Le poste',
-              subtitle: 'Le contrat, la marque et le modèle.',
-              child: RelevagePosteStep(draft: _draft, onChanged: _markDirty),
+              title: "L'installation",
+              subtitle: 'Le modèle, ses repères et le dernier passage.',
+              child:
+                  FiltreInstallationStep(draft: _draft, onChanged: _markDirty),
             ),
-            for (var i = 0; i < relevageSections.length; i++)
+            for (var i = 0; i < filtreSections.length; i++)
               _page(
                 step: 2 + i,
-                title: relevageSections[i].title,
-                subtitle: _subtitleFor(relevageSections[i]),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    RelevageSectionStep(
-                      draft: _draft,
-                      section: relevageSections[i],
-                      onChanged: _markDirty,
-                    ),
-                    // La dernière section porte le rappel de ce qui manque.
-                    if (i == relevageSections.length - 1) ...[
-                      const SizedBox(height: 8),
-                      RelevageReadyBanner(report: _draft),
-                    ],
-                  ],
+                title: '${i + 1}. ${filtreSections[i].title}',
+                subtitle: _subtitleFor(filtreSections[i]),
+                child: FiltreSectionStep(
+                  draft: _draft,
+                  section: filtreSections[i],
+                  onChanged: _markDirty,
                 ),
               ),
+            _page(
+              step: _stepCount - 2,
+              title: 'Synthèse',
+              subtitle: 'Ce que le client retiendra de la visite.',
+              child: FiltreSyntheseStep(draft: _draft, onChanged: _markDirty),
+            ),
+            _page(
+              step: _stepCount - 1,
+              title: 'Validation',
+              subtitle: 'Le mot du client, puis les signatures.',
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  SignatureStep(draft: _draft, onChanged: _markDirty),
+                  const SizedBox(height: 8),
+                  FiltreReadyBanner(report: _draft),
+                ],
+              ),
+            ),
           ],
         ),
         bottomNavigationBar: _bottomBar(isLast),
@@ -229,10 +242,14 @@ class _RelevageWizardScreenState extends State<RelevageWizardScreen> {
     );
   }
 
-  static String _subtitleFor(RelevageSection section) {
-    if (section.hasFreeText) return 'Ce que le client doit savoir.';
-    if (section.fields.isEmpty) return 'Quelques photos suffisent.';
-    return "L'état relevé, puis les photos.";
+  static String _subtitleFor(FiltreSection section) {
+    if (section.photos == FiltrePhotos.aucune) {
+      return 'Les points à vérifier avant de partir.';
+    }
+    if (section.photos == FiltrePhotos.unique) {
+      return 'Le constat, et une photo.';
+    }
+    return "L'état trouvé, le geste fait, puis les photos.";
   }
 
   Widget _page({
@@ -311,8 +328,8 @@ class _RelevageWizardScreenState extends State<RelevageWizardScreen> {
 }
 
 /// Rappel de ce qui manque, affiché sur la dernière étape.
-class RelevageReadyBanner extends StatelessWidget {
-  const RelevageReadyBanner({super.key, required this.report});
+class FiltreReadyBanner extends StatelessWidget {
+  const FiltreReadyBanner({super.key, required this.report});
 
   final Report report;
 

@@ -34,6 +34,8 @@ class Report {
     this.contractDate,
     this.equipmentBrand = '',
     this.equipmentType = '',
+    this.serialNumber = '',
+    this.lastMaintenanceDate,
     Map<String, String>? checklist,
     this.siteAddressLine = '',
     this.sitePostalCode = '',
@@ -95,12 +97,19 @@ class Report {
   String clientPhone;
   String clientEmail;
 
-  // --- Poste de relevage ----------------------------------------------------
+  // --- Entretiens sous contrat ----------------------------------------------
   //
-  // Renseignes seulement sur un rapport d'entretien de poste de relevage.
+  // Renseignes seulement sur un rapport d'entretien — poste de relevage ou
+  // filtre compact.
 
   /// Date du contrat de maintenance.
   DateTime? contractDate;
+
+  /// Numero de serie de l'installation, releve sur sa plaque.
+  String serialNumber;
+
+  /// Date du dernier entretien, telle qu'elle figure au contrat.
+  DateTime? lastMaintenanceDate;
 
   String equipmentBrand;
   String equipmentType;
@@ -159,6 +168,12 @@ class Report {
 
   String get displayTitle {
     if (interventionType.trim().isNotEmpty) return interventionType.trim();
+    if (kind == ReportKind.filtreCompact) {
+      final filtre = [equipmentBrand.trim(), equipmentType.trim()]
+          .where((part) => part.isNotEmpty)
+          .join(' ');
+      return filtre.isEmpty ? 'Entretien filtre compact' : filtre;
+    }
     if (kind == ReportKind.posteRelevage) {
       final poste = [equipmentBrand.trim(), equipmentType.trim()]
           .where((part) => part.isNotEmpty)
@@ -250,6 +265,14 @@ class Report {
       return missing;
     }
 
+    if (kind == ReportKind.filtreCompact) {
+      if (clientAddressLine.trim().isEmpty) missing.add('Adresse du client');
+      if (techniciansLine.isEmpty) missing.add('Intervenant');
+      if (checklist.isEmpty) missing.add('Points relevés');
+      if (photos.isEmpty) missing.add('Photos');
+      return missing;
+    }
+
     if (siteAddressLine.trim().isEmpty) missing.add("Adresse d'intervention");
     if (interventionType.trim().isEmpty) missing.add("Type d'intervention");
     if (techniciansLine.isEmpty) missing.add('Intervenant');
@@ -291,6 +314,8 @@ class Report {
         'contractDate': contractDate?.toIso8601String(),
         'equipmentBrand': equipmentBrand,
         'equipmentType': equipmentType,
+        'serialNumber': serialNumber,
+        'lastMaintenanceDate': lastMaintenanceDate?.toIso8601String(),
         'checklist': checklist,
         'siteAddressLine': siteAddressLine,
         'sitePostalCode': sitePostalCode,
@@ -379,6 +404,10 @@ class Report {
           : DateTime.parse(json['contractDate'] as String),
       equipmentBrand: json['equipmentBrand'] as String? ?? '',
       equipmentType: json['equipmentType'] as String? ?? '',
+      serialNumber: json['serialNumber'] as String? ?? '',
+      lastMaintenanceDate: json['lastMaintenanceDate'] == null
+          ? null
+          : DateTime.parse(json['lastMaintenanceDate'] as String),
       checklist: (json['checklist'] as Map<String, dynamic>? ??
               const <String, dynamic>{})
           .map((key, value) => MapEntry(key, value.toString())),

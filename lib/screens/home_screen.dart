@@ -8,6 +8,7 @@ import '../state/settings_provider.dart';
 import '../theme.dart';
 import '../widgets/report_card.dart';
 import 'report_detail_screen.dart';
+import 'filtre_compact_wizard_screen.dart';
 import 'relevage_wizard_screen.dart';
 import 'report_wizard_screen.dart';
 import 'settings_screen.dart';
@@ -60,6 +61,13 @@ class _HomeScreenState extends State<HomeScreen> {
                   Navigator.of(sheetContext).pop(ReportKind.posteRelevage),
             ),
             ListTile(
+              leading: const Icon(Icons.filter_alt_outlined),
+              title: Text(ReportKind.filtreCompact.label),
+              subtitle: const Text('Fosse, préfiltre, média filtrant, pompe'),
+              onTap: () =>
+                  Navigator.of(sheetContext).pop(ReportKind.filtreCompact),
+            ),
+            ListTile(
               leading: const Icon(Icons.build_outlined),
               title: Text(ReportKind.intervention.label),
               subtitle: const Text('Débouchage, curage, dépannage ponctuel'),
@@ -79,9 +87,14 @@ class _HomeScreenState extends State<HomeScreen> {
 
     final saved = await Navigator.of(context).push<Report>(
       MaterialPageRoute(
-        builder: (_) => kind == ReportKind.posteRelevage
-            ? RelevageWizardScreen(report: draft, isNew: true)
-            : ReportWizardScreen(report: draft, isNew: true),
+        builder: (_) => switch (kind) {
+          ReportKind.posteRelevage =>
+            RelevageWizardScreen(report: draft, isNew: true),
+          ReportKind.filtreCompact =>
+            FiltreCompactWizardScreen(report: draft, isNew: true),
+          ReportKind.intervention =>
+            ReportWizardScreen(report: draft, isNew: true),
+        },
       ),
     );
 

@@ -400,6 +400,40 @@ class PdfStyle {
     );
   }
 
+  /// Le cadre ou vient une signature, sous son intitule.
+  static pw.Widget signatureBox({
+    required String title,
+    required String caption,
+    pw.MemoryImage? signature,
+  }) {
+    return pw.Column(
+      crossAxisAlignment: pw.CrossAxisAlignment.start,
+      children: [
+        pw.Text(
+          title,
+          style: const pw.TextStyle(
+            fontSize: 9.5,
+            fontWeight: pw.FontWeight.bold,
+            color: brandDark,
+          ),
+        ),
+        pw.SizedBox(height: 5),
+        pw.Container(
+          height: 70,
+          width: double.infinity,
+          padding: const pw.EdgeInsets.all(4),
+          decoration: pw.BoxDecoration(border: pw.Border.all(color: lineGrey)),
+          child: signature == null
+              ? pw.SizedBox()
+              : pw.Image(signature, fit: pw.BoxFit.contain),
+        ),
+        pw.SizedBox(height: 5),
+        pw.Text(caption,
+            style: const pw.TextStyle(fontSize: 8.5, color: textGrey)),
+      ],
+    );
+  }
+
   // --- Mention de bas de document -------------------------------------------
 
   /// La phrase en petits caractères qui ferme le document.

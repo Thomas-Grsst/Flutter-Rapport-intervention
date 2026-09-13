@@ -10,10 +10,14 @@ import '../../widgets/client_directory_actions.dart';
 import '../../widgets/preset_chips.dart';
 import '../../widgets/question_block.dart';
 
-/// Étape 1 du rapport de poste de relevage — le client, tel qu'il est imprimé
-/// en tête du rapport, et qui est intervenu.
-class RelevageClientStep extends StatefulWidget {
-  const RelevageClientStep({
+/// Première étape des rapports d'entretien — le client, tel qu'il est imprimé
+/// en tête du rapport, la date de la visite et qui est intervenu.
+///
+/// Partagée par l'entretien de poste de relevage et celui de filtre compact :
+/// les deux posent exactement les mêmes questions, et un client peut avoir un
+/// contrat pour chacun.
+class EntretienClientStep extends StatefulWidget {
+  const EntretienClientStep({
     super.key,
     required this.draft,
     required this.onChanged,
@@ -23,10 +27,10 @@ class RelevageClientStep extends StatefulWidget {
   final VoidCallback onChanged;
 
   @override
-  State<RelevageClientStep> createState() => _RelevageClientStepState();
+  State<EntretienClientStep> createState() => _EntretienClientStepState();
 }
 
-class _RelevageClientStepState extends State<RelevageClientStep> {
+class _EntretienClientStepState extends State<EntretienClientStep> {
   Report get _draft => widget.draft;
 
   void _update(VoidCallback change) {

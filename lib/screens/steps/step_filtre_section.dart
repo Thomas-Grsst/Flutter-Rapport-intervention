@@ -1,18 +1,20 @@
 import 'package:flutter/material.dart';
 
-import '../../models/relevage_template.dart';
+import '../../models/enums.dart';
+import '../../models/filtre_compact_template.dart';
 import '../../models/report.dart';
 import '../../theme.dart';
 import '../../widgets/app_text_field.dart';
 import '../../widgets/question_block.dart';
 import '../../widgets/section_photos.dart';
 
-/// Une section du gabarit : ses états à relever, puis ses photos.
+/// Une section du gabarit du filtre compact : l'état avant l'intervention, le
+/// geste effectué, ses observations, puis les photos.
 ///
 /// La section est la même pour tous les rapports : l'intervenant n'a jamais à
 /// se demander quoi remplir, seulement à constater.
-class RelevageSectionStep extends StatefulWidget {
-  const RelevageSectionStep({
+class FiltreSectionStep extends StatefulWidget {
+  const FiltreSectionStep({
     super.key,
     required this.draft,
     required this.section,
@@ -20,16 +22,16 @@ class RelevageSectionStep extends StatefulWidget {
   });
 
   final Report draft;
-  final RelevageSection section;
+  final FiltreSection section;
   final VoidCallback onChanged;
 
   @override
-  State<RelevageSectionStep> createState() => _RelevageSectionStepState();
+  State<FiltreSectionStep> createState() => _FiltreSectionStepState();
 }
 
-class _RelevageSectionStepState extends State<RelevageSectionStep> {
+class _FiltreSectionStepState extends State<FiltreSectionStep> {
   Report get _draft => widget.draft;
-  RelevageSection get _section => widget.section;
+  FiltreSection get _section => widget.section;
 
   void _setValue(String key, String value) {
     setState(() => _draft.setChecklistValue(key, value));
@@ -48,31 +50,36 @@ class _RelevageSectionStepState extends State<RelevageSectionStep> {
 
   @override
   Widget build(BuildContext context) {
-    final group = _draft.photoGroupFor(_section.id, title: _section.title);
-
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        for (final field in _section.fields) _fieldBlock(field),
-        if (_section.hasFreeText)
+        if (_section.hasStateBefore)
           QuestionBlock(
-            question: 'Quelque chose à signaler ?',
-            hint: 'Ce paragraphe s\'imprime tel quel sous « Observations ».',
+            question: "Dans quel état l'avez-vous trouvé ?",
             optional: true,
             child: AppTextField(
-              initialValue: _draft.checklistValue(_section.id),
-              maxLines: 6,
-              hint: 'Ex. : prévoir le remplacement du clapet avant l\'hiver.',
-              onChanged: (value) => _setValue(_section.id, value),
+              initialValue: _draft.checklistValue(_section.stateKey),
+              maxLines: 3,
+              hint: 'Ex. : préfiltre colmaté, dépôt important.',
+              onChanged: (value) => _setValue(_section.stateKey, value),
             ),
           ),
-        if (_section.hasPhotos)
+        for (final field in _section.fields) _fieldBlock(field),
+        if (_section.photos != FiltrePhotos.aucune)
           QuestionBlock(
-            question: 'Photos de ${_section.title.toLowerCase()}',
+            question: 'Photos',
             optional: true,
             child: SectionPhotos(
-              group: group,
+              group: _draft.photoGroupFor(_section.id, title: _section.title),
               label: _section.title,
+              stages: _section.photos == FiltrePhotos.unique
+                  ? const <PhotoStage, String>{
+                      PhotoStage.avant: 'Photographie',
+                    }
+                  : const <PhotoStage, String>{
+                      PhotoStage.avant: 'Avant',
+                      PhotoStage.apres: 'Après',
+                    },
               onChanged: widget.onChanged,
             ),
           ),
@@ -80,7 +87,7 @@ class _RelevageSectionStepState extends State<RelevageSectionStep> {
     );
   }
 
-  Widget _fieldBlock(RelevageField field) {
+  Widget _fieldBlock(FiltreField field) {
     final key = _section.keyOf(field);
 
     return QuestionBlock(
@@ -109,13 +116,17 @@ class _RelevageSectionStepState extends State<RelevageSectionStep> {
                 ),
             ],
           ),
-          const SizedBox(height: 10),
-          AppTextField(
-            initialValue: _draft.checklistValue(key),
-            maxLines: 2,
-            hint: 'Ou décrivez ce que vous avez constaté',
-            onChanged: (value) => _setValue(key, value),
-          ),
+          if (field.hasObservations) ...[
+            const SizedBox(height: 10),
+            AppTextField(
+              initialValue:
+                  _draft.checklistValue(_section.observationsKeyOf(field)),
+              maxLines: 2,
+              hint: 'Observations',
+              onChanged: (value) =>
+                  _setValue(_section.observationsKeyOf(field), value),
+            ),
+          ],
         ],
       ),
     );

@@ -5,6 +5,7 @@ import 'package:provider/provider.dart';
 
 import '../models/enums.dart';
 import '../models/photo_item.dart';
+import '../models/filtre_compact_template.dart';
 import '../models/relevage_template.dart';
 import '../models/report.dart';
 import '../services/pdf_download.dart';
@@ -15,6 +16,7 @@ import '../theme.dart';
 import '../widgets/media_image.dart';
 import '../widgets/section_card.dart';
 import '../widgets/status_chip.dart';
+import 'filtre_compact_wizard_screen.dart';
 import 'relevage_wizard_screen.dart';
 import 'report_wizard_screen.dart';
 
@@ -36,9 +38,14 @@ class _ReportDetailScreenState extends State<ReportDetailScreen> {
   /// Ouvre l'assistant correspondant à la sorte du rapport.
   Route<Report> _wizardRoute(Report report, {bool isNew = false}) {
     return MaterialPageRoute<Report>(
-      builder: (_) => report.kind == ReportKind.posteRelevage
-          ? RelevageWizardScreen(report: report, isNew: isNew)
-          : ReportWizardScreen(report: report, isNew: isNew),
+      builder: (_) => switch (report.kind) {
+        ReportKind.posteRelevage =>
+          RelevageWizardScreen(report: report, isNew: isNew),
+        ReportKind.filtreCompact =>
+          FiltreCompactWizardScreen(report: report, isNew: isNew),
+        ReportKind.intervention =>
+          ReportWizardScreen(report: report, isNew: isNew),
+      },
     );
   }
 
@@ -247,9 +254,11 @@ class _ReportDetailScreenState extends State<ReportDetailScreen> {
       ),
       body: ListView(
         padding: const EdgeInsets.fromLTRB(16, 16, 16, 24),
-        children: report.kind == ReportKind.posteRelevage
-            ? _relevageCards(report)
-            : _interventionCards(report),
+        children: switch (report.kind) {
+          ReportKind.posteRelevage => _relevageCards(report),
+          ReportKind.filtreCompact => _filtreCompactCards(report),
+          ReportKind.intervention => _interventionCards(report),
+        },
       ),
       bottomNavigationBar: _actionBar(report),
     );
@@ -331,26 +340,141 @@ class _ReportDetailScreenState extends State<ReportDetailScreen> {
         ],
       ),
       const SizedBox(height: 12),
-      SectionCard(
-        title: 'Client',
-        icon: Icons.place_outlined,
-        children: [
-          InfoLine(label: 'Client', value: report.clientName),
-          InfoLine(
-            label: 'Adresse',
-            value: [report.clientAddressLine, report.clientCityLine]
-                .where((line) => line.trim().isNotEmpty)
-                .join('\n'),
-          ),
-          InfoLine(label: 'Téléphone', value: report.clientPhone),
-          InfoLine(label: 'E-mail', value: report.clientEmail),
-        ],
-      ),
+      _clientCard(report),
       for (final section in relevageSections) ...[
         const SizedBox(height: 12),
         _relevageSectionCard(report, section),
       ],
     ];
+  }
+
+  /// Les cartes d'un rapport d'entretien de filtre compact.
+  List<Widget> _filtreCompactCards(Report report) {
+    return [
+      SectionCard(
+        title: report.displayTitle,
+        icon: Icons.filter_alt_outlined,
+        trailing: StatusChip(status: report.status),
+        children: [
+          InfoLine(
+            label: 'Date',
+            value: _dateFormat.format(report.interventionDate),
+          ),
+          InfoLine(label: 'N° rapport', value: report.reportNumber),
+          InfoLine(label: 'Marque', value: report.equipmentBrand),
+          InfoLine(label: 'Modèle', value: report.equipmentType),
+          InfoLine(label: 'Référence', value: report.reference),
+          InfoLine(label: 'N° de série', value: report.serialNumber),
+          InfoLine(
+            label: 'Dernier entretien',
+            value: report.lastMaintenanceDate == null
+                ? ''
+                : _dateFormat.format(report.lastMaintenanceDate!),
+          ),
+          InfoLine(
+            label: report.technicians.length > 1 ? 'Techniciens' : 'Technicien',
+            value: report.techniciansLine,
+          ),
+        ],
+      ),
+      const SizedBox(height: 12),
+      _clientCard(report),
+      for (var i = 0; i < filtreSections.length; i++) ...[
+        const SizedBox(height: 12),
+        _filtreSectionCard(report, filtreSections[i], i + 1),
+      ],
+      const SizedBox(height: 12),
+      SectionCard(
+        title: "Synthèse de l'intervention",
+        icon: Icons.summarize_outlined,
+        children: [
+          for (final field in filtreSummaryFields)
+            InfoLine(
+              label: field.label,
+              value: report.checklistValue(filtreSummaryKey(field)),
+            ),
+          InfoLine(
+            label: 'Prochaine visite',
+            value: report.checklistValue(filtreNextVisitKey),
+          ),
+          const SizedBox(height: 8),
+          InfoLine(
+            label: 'Travaux réalisés',
+            value: report.checklistValue(filtreWorkKey),
+          ),
+          InfoLine(
+            label: 'Anomalies',
+            value: report.checklistValue(filtreAnomaliesKey),
+          ),
+          InfoLine(
+            label: 'Préconisations',
+            value: report.checklistValue(filtreAdviceKey),
+          ),
+        ],
+      ),
+      const SizedBox(height: 12),
+      _signatureCard(report),
+    ];
+  }
+
+  Widget _filtreSectionCard(Report report, FiltreSection section, int number) {
+    final avant = <PhotoItem>[];
+    final apres = <PhotoItem>[];
+    for (final group in report.photoGroups) {
+      if (group.id != section.id) continue;
+      avant.addAll(group.inColumn(PhotoStage.avant));
+      apres.addAll(group.ofStage(PhotoStage.apres));
+    }
+
+    final stateBefore =
+        section.hasStateBefore ? report.checklistValue(section.stateKey) : '';
+
+    return SectionCard(
+      title: '$number. ${section.title}',
+      icon: Icons.checklist_outlined,
+      children: [
+        if (stateBefore.isNotEmpty)
+          InfoLine(label: 'État avant', value: stateBefore),
+        for (final field in section.fields) ...[
+          InfoLine(
+            label: field.label,
+            value: report.checklistValue(section.keyOf(field)),
+          ),
+          if (report
+              .checklistValue(section.observationsKeyOf(field))
+              .isNotEmpty)
+            InfoLine(
+              label: 'Observations',
+              value: report.checklistValue(section.observationsKeyOf(field)),
+            ),
+        ],
+        if (avant.isNotEmpty)
+          _photoStrip(
+            section.photos == FiltrePhotos.unique ? 'Photographie' : 'Avant',
+            avant,
+          ),
+        if (apres.isNotEmpty) _photoStrip('Après', apres),
+      ],
+    );
+  }
+
+  /// La fiche du client, commune aux deux rapports d'entretien.
+  Widget _clientCard(Report report) {
+    return SectionCard(
+      title: 'Client',
+      icon: Icons.place_outlined,
+      children: [
+        InfoLine(label: 'Client', value: report.clientName),
+        InfoLine(
+          label: 'Adresse',
+          value: [report.clientAddressLine, report.clientCityLine]
+              .where((line) => line.trim().isNotEmpty)
+              .join('\n'),
+        ),
+        InfoLine(label: 'Téléphone', value: report.clientPhone),
+        InfoLine(label: 'E-mail', value: report.clientEmail),
+      ],
+    );
   }
 
   Widget _relevageSectionCard(Report report, RelevageSection section) {

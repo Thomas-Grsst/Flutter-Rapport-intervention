@@ -36,6 +36,7 @@ class AppTextField extends StatefulWidget {
 class _AppTextFieldState extends State<AppTextField> {
   late final TextEditingController _controller =
       TextEditingController(text: widget.initialValue);
+  final FocusNode _focusNode = FocusNode();
 
   @override
   void didUpdateWidget(AppTextField oldWidget) {
@@ -45,17 +46,23 @@ class _AppTextFieldState extends State<AppTextField> {
     // carnet, une réponse rapide cochée. Sans cela, le brouillon était bien
     // rempli mais l'écran continuait d'afficher l'ancien texte.
     //
-    // Pendant la frappe, la valeur remonte du champ lui-même : elle est déjà
-    // égale à celle du contrôleur, et rien n'est touché — sinon le curseur
-    // sauterait à la fin à chaque lettre.
-    if (widget.initialValue != oldWidget.initialValue &&
-        widget.initialValue != _controller.text) {
-      _controller.text = widget.initialValue;
+    // Tant qu'il a le focus, en revanche, le champ est maître de son contenu
+    // et rien ne le réécrit. Ce que le brouillon renvoie pendant la frappe
+    // n'est pas toujours ce qui a été tapé — il élague les espaces de fin —,
+    // et le recopier ramenait le curseur au début du texte : les lettres
+    // suivantes s'inséraient alors n'importe où.
+    if (!_focusNode.hasFocus && widget.initialValue != _controller.text) {
+      _controller.value = TextEditingValue(
+        text: widget.initialValue,
+        selection:
+            TextSelection.collapsed(offset: widget.initialValue.length),
+      );
     }
   }
 
   @override
   void dispose() {
+    _focusNode.dispose();
     _controller.dispose();
     super.dispose();
   }
@@ -64,6 +71,7 @@ class _AppTextFieldState extends State<AppTextField> {
   Widget build(BuildContext context) {
     return TextField(
       controller: _controller,
+      focusNode: _focusNode,
       onChanged: widget.onChanged,
       maxLines: widget.maxLines,
       minLines: widget.maxLines > 1 ? widget.maxLines : null,

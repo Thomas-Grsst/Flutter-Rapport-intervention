@@ -23,11 +23,21 @@ class SectionPhotos extends StatefulWidget {
     required this.group,
     required this.onChanged,
     this.label = 'Photos',
+    this.stages = const <PhotoStage, String>{
+      PhotoStage.avant: 'Avant',
+      PhotoStage.apres: 'Après',
+    },
   });
 
   final PhotoGroup group;
   final VoidCallback onChanged;
   final String label;
+
+  /// Les moments proposes, dans l'ordre, avec leur intitule.
+  ///
+  /// Un avant et un apres pour un geste d'entretien ; une seule zone quand la
+  /// section ne fait que constater, comme un regard de tranchee.
+  final Map<PhotoStage, String> stages;
 
   @override
   State<SectionPhotos> createState() => _SectionPhotosState();
@@ -161,12 +171,15 @@ class _SectionPhotosState extends State<SectionPhotos> {
 
   @override
   Widget build(BuildContext context) {
+    final moments = widget.stages.entries.toList();
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        _stage('Avant', PhotoStage.avant),
-        const SizedBox(height: 16),
-        _stage('Après', PhotoStage.apres),
+        for (var i = 0; i < moments.length; i++) ...[
+          if (i > 0) const SizedBox(height: 16),
+          _stage(moments[i].value, moments[i].key),
+        ],
       ],
     );
   }

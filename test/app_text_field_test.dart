@@ -69,4 +69,33 @@ void main() {
       4,
     );
   });
+
+  testWidgets('survit à un brouillon qui élague ce qu\'on lui donne',
+      (tester) async {
+    // Le rapport range les relevés en retirant les espaces de fin : ce qu'il
+    // renvoie n'est donc pas toujours ce qui vient d'être tapé. Réécrire le
+    // champ à ce moment-là ramenait le curseur au début du texte, et la
+    // frappe suivante s'y insérait — une phrase entière ressortait mélangée.
+    var valeur = '';
+    await _pump(
+      tester,
+      lire: () => valeur,
+      ecrire: (v) => valeur = v.trim(),
+      exposeSetState: (_) {},
+    );
+
+    final champ = find.byType(TextField);
+    await tester.enterText(champ, 'Nettoyage ');
+    await tester.pumpAndSettle();
+
+    // L'espace de fin est encore là : le brouillon l'a retiré de son côté,
+    // mais le champ garde ce qui a été tapé tant qu'on y écrit.
+    final controleur = tester.widget<TextField>(champ).controller!;
+    expect(controleur.text, 'Nettoyage ');
+    expect(controleur.selection.baseOffset, 'Nettoyage '.length);
+
+    await tester.enterText(champ, 'Nettoyage du préfiltre');
+    await tester.pumpAndSettle();
+    expect(valeur, 'Nettoyage du préfiltre');
+  });
 }

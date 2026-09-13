@@ -125,8 +125,16 @@ class ReportsProvider extends ChangeNotifier {
       createdAt: now,
       updatedAt: now,
       kind: kind,
-      interventionType:
-          kind == ReportKind.posteRelevage ? 'Entretien poste de relevage' : '',
+      interventionType: switch (kind) {
+        ReportKind.posteRelevage => 'Entretien poste de relevage',
+        ReportKind.filtreCompact => 'Entretien filtre compact',
+        ReportKind.intervention => '',
+      },
+      // Le filtre compact sous contrat est toujours le même modèle : il est
+      // pré-rempli, et reste modifiable si le parc s'élargit.
+      equipmentBrand: kind == ReportKind.filtreCompact ? 'Premier Tech' : '',
+      equipmentType:
+          kind == ReportKind.filtreCompact ? 'Ecoflo Pack 5 EH sortie haute' : '',
       interventionDate: now,
       technicians: [if (technician != null) technician],
       documentsToTransmit: "Rapport d'intervention",

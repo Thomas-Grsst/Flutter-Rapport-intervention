@@ -13,7 +13,7 @@ import 'package:rapport_intervention/models/relevage_template.dart';
 import 'package:rapport_intervention/models/report.dart';
 import 'package:rapport_intervention/screens/relevage_wizard_screen.dart';
 import 'package:rapport_intervention/services/pdf_service.dart';
-import 'package:rapport_intervention/services/relevage_pdf.dart';
+import 'package:rapport_intervention/services/pdf_photo_rows.dart';
 import 'package:rapport_intervention/services/storage_service.dart';
 import 'package:rapport_intervention/state/clients_provider.dart';
 import 'package:rapport_intervention/state/reports_provider.dart';
@@ -316,8 +316,8 @@ void main() {
         photos.add(PhotoItem(id: 'p$i', filePath: 'media/p$i.png'));
       }
 
-      final rows = const RelevagePdfLayout()
-          .photoRows(photos.sublist(0, 2), photos.sublist(2), images);
+      final rows = const PhotoRows()
+          .build(photos.sublist(0, 2), photos.sublist(2), images);
 
       // Deux blocs insécables : « Avant » et « Après », chacun avec sa rangée.
       expect(rows.whereType<pw.Inseparable>(), hasLength(2));
@@ -334,12 +334,12 @@ void main() {
       final avant = [PhotoItem(id: 'p0', filePath: 'media/p0.png')];
       final apres = [PhotoItem(id: 'p1', filePath: 'media/p1.png')];
 
-      const layout = RelevagePdfLayout();
+      const layout = PhotoRows();
 
-      expect(layout.photoRows(avant, apres, images), hasLength(1));
+      expect(layout.build(avant, apres, images), hasLength(1));
       // Avec deux photos d'un côté, on revient à une rangée par moment.
       expect(
-        layout.photoRows(
+        layout.build(
           [...avant, PhotoItem(id: 'p1', filePath: 'media/p1.png')],
           apres,
           images,

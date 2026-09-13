@@ -4,7 +4,7 @@ Application mobile Flutter qui permet à un intervenant de saisir un rapport
 depuis son téléphone, sur le chantier, et d'en générer le PDF mis en page —
 sans passer par Word.
 
-## Deux modèles de rapport
+## Trois modèles de rapport
 
 Le type se choisit au moment de créer le rapport ; l'assistant et le PDF
 s'adaptent ensuite tout seuls.
@@ -12,7 +12,21 @@ s'adaptent ensuite tout seuls.
 | Modèle | Quand | Ce qu'il produit |
 |---|---|---|
 | **Rapport d'intervention** | Une intervention ponctuelle, dont le contenu change à chaque fois | Le modèle papier de référence : blocs client / entreprise / adresse d'intervention, observations, matériel mis en œuvre, constats et actions, photographies, conclusions, points restants, récapitulatif, évaluation du client et signatures |
-| **Entretien poste de relevage** | La visite d'entretien contractuelle | Un gabarit figé : bandeau du contrat, bloc client, puis les huit sections du poste, chacune avec ses états relevés et ses photos |
+| **Entretien poste de relevage** | La visite d'entretien contractuelle d'un poste | Un gabarit figé : les huit sections du poste, chacune avec ses états relevés et ses photos |
+| **Entretien filtre compact** | La visite d'entretien contractuelle d'un filtre compact | Un gabarit figé : synthèse de tête, les douze sections du modèle papier, synthèse finale et signatures |
+
+## Le carnet d'adresses
+
+Les clients sous contrat reviennent tous les ans. Les retaper à chaque visite
+fait perdre du temps sur le chantier et finit par produire deux orthographes
+du même nom dans deux rapports.
+
+Le carnet est livré avec les clients du récapitulatif de l'entreprise
+([`lib/models/client_directory.dart`](lib/models/client_directory.dart)), et
+s'enrichit ensuite depuis l'application : **Choisir un client** remplit les
+champs, le signet à côté garde celui qu'on vient de saisir — ou met à jour
+celui qui existe déjà plutôt que de le dupliquer. Les clients du contrat en
+cours sont proposés en premier, et la recherche ignore accents et majuscules.
 
 ## Le rapport d'intervention
 
@@ -64,10 +78,35 @@ mêmes cadres photo. Les deux rapports sortent de la même entreprise et se
 lisent l'un après l'autre : la charte est écrite une seule fois, dans
 [`lib/services/pdf_style.dart`](lib/services/pdf_style.dart).
 
+## Le rapport d'entretien de filtre compact
+
+Le même principe, sur un autre matériel : le gabarit est écrit en dur dans
+[`lib/models/filtre_compact_template.dart`](lib/models/filtre_compact_template.dart)
+et reprend le modèle papier point par point.
+
+| Étape | Ce qu'on demande |
+|---|---|
+| 1. Le client | Nom, adresse, téléphone, e-mail, intervenants |
+| 2. L'installation | Marque et modèle, référence, n° de série, date du dernier entretien |
+| 3 à 14. Les sections | Environnement, regard amont, fosse toutes eaux, préfiltre, auget, grille de répartition, pompe, scarification, évent, les deux regards de tranchées, puis les contrôles complémentaires |
+| 15. Synthèse | État général, fonctionnement de la pompe, anomalie, travaux réalisés, préconisations, prochaine visite |
+| 16. Validation | Mot du client et signatures tactiles |
+
+Chaque section demande l'**état trouvé**, le **geste fait** — *Oui* / *Non* /
+*Sans objet* — ses **observations**, puis ses photos avant et après. Les deux
+regards de tranchées ne se nettoient pas : ils se constatent, avec une seule
+photo et quatre réponses (*Conforme*, *À surveiller*, *Non conforme*, *Non
+accessible*). Les contrôles complémentaires forment un relevé de cinq points
+en *OK* / *NOK* / *N/A*.
+
 ## Fonctionnalités
 
-- **Deux modèles de rapport**, choisis à la création : l'intervention ponctuelle
-  et l'entretien de poste de relevage, qui suit un gabarit figé.
+- **Trois modèles de rapport**, choisis à la création : l'intervention
+  ponctuelle, et les deux entretiens sous contrat — poste de relevage et
+  filtre compact — qui suivent chacun un gabarit figé.
+- **Carnet d'adresses** : les clients sous contrat sont livrés avec
+  l'application, se choisissent en deux touches et s'enrichissent au fil des
+  visites.
 - **Saisie guidée**, enregistrée automatiquement à chaque changement d'étape :
   un rapport peut être commencé sur le chantier et terminé plus tard.
 - **Cases à cocher configurables** pour le matériel, les constats et les
@@ -167,7 +206,9 @@ lib/
 ├── app.dart                   MaterialApp, chargement initial
 ├── theme.dart                 Charte graphique (bleu #104C7E / #8FB8E8)
 ├── models/                    Report, PhotoGroup, PhotoItem, Company, AppSettings
-│   └── relevage_template.dart Le gabarit figé du poste de relevage
+│   ├── relevage_template.dart Le gabarit figé du poste de relevage
+│   ├── filtre_compact_template.dart  Le gabarit figé du filtre compact
+│   └── client_directory.dart  Les clients sous contrat, livrés d'avance
 ├── services/
 │   ├── storage_service.dart      Interface de stockage
 │   ├── storage_service_io.dart   Fichiers, sur téléphone
@@ -176,12 +217,14 @@ lib/
 │   ├── pdf_style.dart            Charte commune aux deux rapports
 │   ├── pdf_service.dart          Génération du PDF mis en page
 │   ├── relevage_pdf.dart         Mise en page du poste de relevage
+│   ├── filtre_compact_pdf.dart   Mise en page du filtre compact
 │   └── pdf_download.dart         Téléchargement du PDF sur l'appareil
-├── state/                     ReportsProvider, SettingsProvider
+├── state/                     ReportsProvider, SettingsProvider, ClientsProvider
 ├── screens/
 │   ├── home_screen.dart       Liste, recherche, filtres, choix du modèle
 │   ├── report_wizard_screen.dart     Assistant du rapport d'intervention
 │   ├── relevage_wizard_screen.dart   Assistant du poste de relevage
+│   ├── filtre_compact_wizard_screen.dart  Assistant du filtre compact
 │   ├── report_detail_screen.dart     Fiche et export PDF
 │   ├── settings_screen.dart   Entreprise, intervenants, listes
 │   └── steps/                 Les étapes des deux assistants
@@ -193,6 +236,7 @@ lib/
 Les données sont enregistrées dans le dossier documents de l'application :
 
 - `reports.json` — les rapports (écriture atomique)
+- `clients.json` — le carnet d'adresses
 - `settings.json` — la fiche entreprise et les listes de choix
 - `media/` — photos, logo et signatures
 - `rapports/` — les PDF générés
