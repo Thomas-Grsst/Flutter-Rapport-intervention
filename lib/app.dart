@@ -3,6 +3,7 @@ import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:provider/provider.dart';
 
 import 'screens/home_screen.dart';
+import 'state/clients_provider.dart';
 import 'state/reports_provider.dart';
 import 'state/settings_provider.dart';
 import 'theme.dart';
@@ -43,6 +44,7 @@ class _BootstrapState extends State<_Bootstrap> {
     await Future.wait([
       context.read<SettingsProvider>().load(),
       context.read<ReportsProvider>().load(),
+      context.read<ClientsProvider>().load(),
     ]);
   }
 

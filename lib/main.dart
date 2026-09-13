@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 import 'app.dart';
 import 'services/pdf_service.dart';
 import 'services/storage_service.dart';
+import 'state/clients_provider.dart';
 import 'state/reports_provider.dart';
 import 'state/settings_provider.dart';
 
@@ -22,6 +23,9 @@ void main() {
         ),
         ChangeNotifierProvider<ReportsProvider>(
           create: (_) => ReportsProvider(storage),
+        ),
+        ChangeNotifierProvider<ClientsProvider>(
+          create: (_) => ClientsProvider(storage),
         ),
       ],
       child: const RapportInterventionApp(),

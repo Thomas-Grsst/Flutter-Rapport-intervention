@@ -15,6 +15,7 @@ import 'package:rapport_intervention/screens/relevage_wizard_screen.dart';
 import 'package:rapport_intervention/services/pdf_service.dart';
 import 'package:rapport_intervention/services/relevage_pdf.dart';
 import 'package:rapport_intervention/services/storage_service.dart';
+import 'package:rapport_intervention/state/clients_provider.dart';
 import 'package:rapport_intervention/state/reports_provider.dart';
 import 'package:rapport_intervention/state/settings_provider.dart';
 
@@ -71,8 +72,10 @@ Future<ReportsProvider> _pumpRelevageWizard(
 }) async {
   final settings = SettingsProvider(storage);
   final reports = ReportsProvider(storage);
+  final clients = ClientsProvider(storage);
   await settings.load();
   await reports.load();
+  await clients.load();
 
   final draft =
       reports.createDraft(settings.settings, kind: ReportKind.posteRelevage);
@@ -84,6 +87,7 @@ Future<ReportsProvider> _pumpRelevageWizard(
         Provider<PdfService>(create: (_) => PdfService(storage)),
         ChangeNotifierProvider<SettingsProvider>.value(value: settings),
         ChangeNotifierProvider<ReportsProvider>.value(value: reports),
+        ChangeNotifierProvider<ClientsProvider>.value(value: clients),
       ],
       child: MaterialApp(home: RelevageWizardScreen(report: draft, isNew: true)),
     ),

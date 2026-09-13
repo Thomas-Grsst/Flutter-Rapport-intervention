@@ -28,24 +28,11 @@ class RelevageSectionStep extends StatefulWidget {
 }
 
 class _RelevageSectionStepState extends State<RelevageSectionStep> {
-  /// Incrémenté quand une réponse rapide remplit un champ, pour que celui-ci
-  /// se reconstruise avec la nouvelle valeur sans perdre le focus à chaque
-  /// frappe — ce que ferait une clé fondée sur le texte saisi.
-  final Map<String, int> _ticks = <String, int>{};
-
   Report get _draft => widget.draft;
   RelevageSection get _section => widget.section;
 
   void _setValue(String key, String value) {
     setState(() => _draft.setChecklistValue(key, value));
-    widget.onChanged();
-  }
-
-  void _applyQuickAnswer(String key, String value) {
-    setState(() {
-      _draft.setChecklistValue(key, value);
-      _ticks[key] = (_ticks[key] ?? 0) + 1;
-    });
     widget.onChanged();
   }
 
@@ -108,13 +95,12 @@ class _RelevageSectionStepState extends State<RelevageSectionStep> {
                         ? FontWeight.w600
                         : FontWeight.w400,
                   ),
-                  onSelected: (_) => _applyQuickAnswer(key, answer),
+                  onSelected: (_) => _setValue(key, answer),
                 ),
             ],
           ),
           const SizedBox(height: 10),
           AppTextField(
-            key: ValueKey('$key-${_ticks[key] ?? 0}'),
             initialValue: _draft.checklistValue(key),
             maxLines: 2,
             hint: 'Ou décrivez ce que vous avez constaté',

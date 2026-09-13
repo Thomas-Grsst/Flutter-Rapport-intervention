@@ -7,6 +7,7 @@ import '../../models/report.dart';
 import '../../state/settings_provider.dart';
 import '../../theme.dart';
 import '../../widgets/app_text_field.dart';
+import '../../widgets/client_directory_actions.dart';
 import '../../widgets/preset_chips.dart';
 import '../../widgets/question_block.dart';
 
@@ -130,6 +131,10 @@ class _SiteStepState extends State<SiteStep> {
           hint: 'Le nom qui apparaîtra en haut du rapport.',
           child: Column(
             children: [
+              ClientDirectoryActions(
+                draft: _draft,
+                onChanged: () => _update(() {}),
+              ),
               AppTextField(
                 initialValue: _draft.clientName,
                 hint: 'Ex. : M. Manuel BLANC',

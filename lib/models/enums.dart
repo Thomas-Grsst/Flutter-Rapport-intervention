@@ -1,13 +1,17 @@
-/// Les deux sortes de rapports que l'application produit.
+/// Les sortes de rapports que l'application produit.
 ///
 /// Elles ne se remplissent pas de la meme facon : l'intervention est libre —
-/// on decrit ce qu'on a trouve et ce qu'on a fait —, tandis que l'entretien
-/// d'un poste de relevage suit un controle immuable, section par section.
+/// on decrit ce qu'on a trouve et ce qu'on a fait —, tandis que les deux
+/// entretiens sous contrat suivent un controle immuable, section par section.
 enum ReportKind {
   intervention("Rapport d'intervention", 'Intervention'),
   posteRelevage(
     "Rapport d'entretien",
     'Entretien poste de relevage',
+  ),
+  filtreCompact(
+    "Rapport d'entretien",
+    'Entretien filtre compact',
   );
 
   const ReportKind(this.documentTitle, this.label);

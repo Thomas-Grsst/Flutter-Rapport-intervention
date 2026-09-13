@@ -38,6 +38,23 @@ class _AppTextFieldState extends State<AppTextField> {
       TextEditingController(text: widget.initialValue);
 
   @override
+  void didUpdateWidget(AppTextField oldWidget) {
+    super.didUpdateWidget(oldWidget);
+
+    // Le champ suit une valeur changée de l'extérieur — un client repris du
+    // carnet, une réponse rapide cochée. Sans cela, le brouillon était bien
+    // rempli mais l'écran continuait d'afficher l'ancien texte.
+    //
+    // Pendant la frappe, la valeur remonte du champ lui-même : elle est déjà
+    // égale à celle du contrôleur, et rien n'est touché — sinon le curseur
+    // sauterait à la fin à chaque lettre.
+    if (widget.initialValue != oldWidget.initialValue &&
+        widget.initialValue != _controller.text) {
+      _controller.text = widget.initialValue;
+    }
+  }
+
+  @override
   void dispose() {
     _controller.dispose();
     super.dispose();
