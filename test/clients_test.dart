@@ -7,6 +7,7 @@ import 'package:rapport_intervention/models/enums.dart';
 import 'package:rapport_intervention/models/report.dart';
 import 'package:rapport_intervention/state/clients_provider.dart';
 import 'package:rapport_intervention/widgets/client_directory_actions.dart';
+import 'package:rapport_intervention/widgets/client_picker.dart';
 
 import 'fake_storage.dart';
 
@@ -32,6 +33,30 @@ Future<void> _pumpActions(
       ),
     ),
   );
+  await tester.pumpAndSettle();
+}
+
+/// Ouvre le carnet, comme le fait le bouton « Choisir un client ».
+Future<void> _ouvreCarnet(
+  WidgetTester tester, {
+  required ClientsProvider clients,
+}) async {
+  await tester.pumpWidget(
+    ChangeNotifierProvider<ClientsProvider>.value(
+      value: clients,
+      child: MaterialApp(
+        home: Scaffold(
+          body: Builder(
+            builder: (context) => ElevatedButton(
+              onPressed: () => chooseClient(context, ReportKind.posteRelevage),
+              child: const Text('Ouvrir'),
+            ),
+          ),
+        ),
+      ),
+    ),
+  );
+  await tester.tap(find.text('Ouvrir'));
   await tester.pumpAndSettle();
 }
 
@@ -245,6 +270,48 @@ void main() {
       // Aucune confirmation : rien n'est écrasé.
       expect(clients.all, hasLength(avant + 1));
       expect(draft.clientId, isNotNull);
+    });
+  });
+
+  group('retirer un client du carnet', () {
+    testWidgets('le supprime après confirmation', (tester) async {
+      final clients = await _carnet(FakeStorage());
+      final avant = clients.all.length;
+
+      await _ouvreCarnet(tester, clients: clients);
+
+      // On réduit la liste à un seul client, pour viser sans ambiguïté.
+      await tester.enterText(find.byType(TextField), 'roseraie');
+      await tester.pumpAndSettle();
+      final vise = clients.forKind(ReportKind.posteRelevage, query: 'roseraie')
+          .single;
+
+      await tester.tap(find.byTooltip('Retirer du carnet'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.widgetWithText(FilledButton, 'Retirer'));
+      await tester.pumpAndSettle();
+
+      expect(clients.all, hasLength(avant - 1));
+      expect(clients.byId(vise.id), isNull);
+
+      // La liste du carnet se met à jour sous les yeux.
+      expect(find.text(vise.name), findsNothing);
+    });
+
+    testWidgets('ne supprime rien si on annule', (tester) async {
+      final clients = await _carnet(FakeStorage());
+      final avant = clients.all.length;
+
+      await _ouvreCarnet(tester, clients: clients);
+      await tester.enterText(find.byType(TextField), 'roseraie');
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.byTooltip('Retirer du carnet'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.widgetWithText(TextButton, 'Annuler'));
+      await tester.pumpAndSettle();
+
+      expect(clients.all, hasLength(avant));
     });
   });
 }

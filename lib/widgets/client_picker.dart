@@ -38,6 +38,41 @@ class _ClientPickerSheetState extends State<_ClientPickerSheet> {
     super.dispose();
   }
 
+  /// Retire un client du carnet, après confirmation.
+  ///
+  /// La confirmation nomme la fiche et son adresse : c'est le seul garde-fou,
+  /// et il vaut mieux qu'il soit clair. Un bandeau « Annuler » se glisserait
+  /// sous la feuille du carnet, restée ouverte, où personne ne le verrait.
+  Future<void> _delete(Client client) async {
+    final provider = context.read<ClientsProvider>();
+
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('Retirer du carnet ?'),
+        content: Text(
+          '${client.name}\n${client.oneLine}\n\n'
+          'Les rapports déjà écrits pour ce client ne changent pas : ils '
+          'gardent ses coordonnées telles quelles.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(false),
+            child: const Text('Annuler'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.of(dialogContext).pop(true),
+            style: FilledButton.styleFrom(backgroundColor: AppColors.danger),
+            child: const Text('Retirer'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed != true) return;
+    await provider.delete(client);
+  }
+
   @override
   Widget build(BuildContext context) {
     final clients =
@@ -120,10 +155,20 @@ class _ClientPickerSheetState extends State<_ClientPickerSheet> {
                           client.oneLine,
                           style: const TextStyle(fontSize: 13),
                         ),
-                        trailing: client.contracts.contains(widget.kind)
-                            ? const Icon(Icons.verified_outlined,
-                                size: 18, color: AppColors.brandLight)
-                            : null,
+                        trailing: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            if (client.contracts.contains(widget.kind))
+                              const Icon(Icons.verified_outlined,
+                                  size: 18, color: AppColors.brandLight),
+                            IconButton(
+                              tooltip: 'Retirer du carnet',
+                              icon: const Icon(Icons.delete_outline, size: 20),
+                              color: AppColors.danger,
+                              onPressed: () => _delete(client),
+                            ),
+                          ],
+                        ),
                         onTap: () => Navigator.of(context).pop(client),
                       );
                     },
