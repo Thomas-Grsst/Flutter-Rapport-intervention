@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 import 'package:rapport_intervention/screens/report_wizard_screen.dart';
 import 'package:rapport_intervention/services/pdf_service.dart';
 import 'package:rapport_intervention/services/storage_service.dart';
+import 'package:rapport_intervention/state/clients_provider.dart';
 import 'package:rapport_intervention/state/reports_provider.dart';
 import 'package:rapport_intervention/state/settings_provider.dart';
 
@@ -14,8 +15,10 @@ void main() {
     final storage = FakeStorage();
     final settings = SettingsProvider(storage);
     final reports = ReportsProvider(storage);
+    final clients = ClientsProvider(storage);
     await settings.load();
     await reports.load();
+    await clients.load();
     final draft = reports.createDraft(settings.settings);
 
     await tester.pumpWidget(
@@ -25,6 +28,7 @@ void main() {
           Provider<PdfService>(create: (_) => PdfService(storage)),
           ChangeNotifierProvider<SettingsProvider>.value(value: settings),
           ChangeNotifierProvider<ReportsProvider>.value(value: reports),
+          ChangeNotifierProvider<ClientsProvider>.value(value: clients),
         ],
         child: MaterialApp(
           home: ReportWizardScreen(report: draft, isNew: true),

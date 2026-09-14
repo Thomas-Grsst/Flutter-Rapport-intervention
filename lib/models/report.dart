@@ -31,6 +31,7 @@ class Report {
     this.clientCity = '',
     this.clientPhone = '',
     this.clientEmail = '',
+    this.clientId,
     this.contractDate,
     this.equipmentBrand = '',
     this.equipmentType = '',
@@ -96,6 +97,12 @@ class Report {
   String clientCity;
   String clientPhone;
   String clientEmail;
+
+  /// La fiche du carnet d'ou ce client a ete repris, s'il l'a ete.
+  ///
+  /// C'est ce lien qui permet de corriger le carnet depuis le rapport : sans
+  /// lui, un nom retouche ferait un second client plutot qu'une correction.
+  String? clientId;
 
   // --- Entretiens sous contrat ----------------------------------------------
   //
@@ -310,6 +317,7 @@ class Report {
         'clientCity': clientCity,
         'clientPhone': clientPhone,
         'clientEmail': clientEmail,
+        'clientId': clientId,
         'kind': kind.name,
         'contractDate': contractDate?.toIso8601String(),
         'equipmentBrand': equipmentBrand,
@@ -398,6 +406,7 @@ class Report {
       clientCity: json['clientCity'] as String? ?? '',
       clientPhone: json['clientPhone'] as String? ?? '',
       clientEmail: json['clientEmail'] as String? ?? '',
+      clientId: json['clientId'] as String?,
       kind: ReportKind.fromName(json['kind'] as String?),
       contractDate: json['contractDate'] == null
           ? null

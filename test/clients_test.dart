@@ -1,8 +1,12 @@
+import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:provider/provider.dart';
 import 'package:rapport_intervention/models/client.dart';
 import 'package:rapport_intervention/models/client_directory.dart';
 import 'package:rapport_intervention/models/enums.dart';
+import 'package:rapport_intervention/models/report.dart';
 import 'package:rapport_intervention/state/clients_provider.dart';
+import 'package:rapport_intervention/widgets/client_directory_actions.dart';
 
 import 'fake_storage.dart';
 
@@ -10,6 +14,25 @@ Future<ClientsProvider> _carnet(FakeStorage storage) async {
   final clients = ClientsProvider(storage);
   await clients.load();
   return clients;
+}
+
+/// Monte les boutons du carnet sur un rapport, comme dans l'assistant.
+Future<void> _pumpActions(
+  WidgetTester tester, {
+  required ClientsProvider clients,
+  required Report draft,
+}) async {
+  await tester.pumpWidget(
+    ChangeNotifierProvider<ClientsProvider>.value(
+      value: clients,
+      child: MaterialApp(
+        home: Scaffold(
+          body: ClientDirectoryActions(draft: draft, onChanged: () {}),
+        ),
+      ),
+    ),
+  );
+  await tester.pumpAndSettle();
 }
 
 void main() {
@@ -135,6 +158,93 @@ void main() {
 
       expect(relu.name, client.name);
       expect(relu.contracts, client.contracts);
+    });
+  });
+
+  group('corriger une fiche depuis un rapport', () {
+    testWidgets('met à jour le client repris du carnet, nom compris',
+        (tester) async {
+      // C'est tout l'intérêt du lien : un nom ou une adresse corrigés sur le
+      // chantier doivent corriger la fiche, pas créer un second client.
+      final clients = await _carnet(FakeStorage());
+      final avant = clients.all.length;
+      final connu = clients.all.first;
+
+      final draft = Report(
+        id: 'r1',
+        createdAt: DateTime(2026, 9, 14),
+        updatedAt: DateTime(2026, 9, 14),
+        kind: ReportKind.posteRelevage,
+        clientId: connu.id,
+        clientName: '${connu.name} — corrigé',
+        clientAddressLine: '3, Rue Neuve',
+        clientPostalCode: '69480',
+        clientCity: connu.city,
+      );
+
+      await _pumpActions(tester, clients: clients, draft: draft);
+      expect(find.text('Mettre à jour la fiche client'), findsOneWidget);
+
+      await tester.tap(find.text('Mettre à jour la fiche client'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.widgetWithText(FilledButton, 'Mettre à jour'));
+      await tester.pumpAndSettle();
+
+      expect(clients.all, hasLength(avant));
+      expect(clients.byId(connu.id)?.name, '${connu.name} — corrigé');
+      expect(clients.byId(connu.id)?.addressLine, '3, Rue Neuve');
+      expect(clients.byId(connu.id)?.postalCode, '69480');
+    });
+
+    testWidgets('sait tout de même en faire un nouveau client',
+        (tester) async {
+      // Reprendre un client puis tout retaper, c'est parfois vouloir son
+      // voisin : le choix reste offert au moment de confirmer.
+      final clients = await _carnet(FakeStorage());
+      final avant = clients.all.length;
+      final connu = clients.all.first;
+
+      final draft = Report(
+        id: 'r1',
+        createdAt: DateTime(2026, 9, 14),
+        updatedAt: DateTime(2026, 9, 14),
+        clientId: connu.id,
+        clientName: 'Mme VOISINE',
+        clientAddressLine: '5, Rue Neuve',
+      );
+
+      await _pumpActions(tester, clients: clients, draft: draft);
+      await tester.tap(find.text('Mettre à jour la fiche client'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.widgetWithText(TextButton, 'Nouveau client'));
+      await tester.pumpAndSettle();
+
+      expect(clients.all, hasLength(avant + 1));
+      expect(clients.byId(connu.id)?.name, connu.name);
+      expect(draft.clientId, isNot(connu.id));
+    });
+
+    testWidgets('propose d\'ajouter un client encore inconnu', (tester) async {
+      final clients = await _carnet(FakeStorage());
+      final avant = clients.all.length;
+
+      final draft = Report(
+        id: 'r1',
+        createdAt: DateTime(2026, 9, 14),
+        updatedAt: DateTime(2026, 9, 14),
+        clientName: 'Mme INCONNUE',
+        clientAddressLine: '7, Rue Neuve',
+      );
+
+      await _pumpActions(tester, clients: clients, draft: draft);
+      expect(find.text('Ajouter au carnet'), findsOneWidget);
+
+      await tester.tap(find.text('Ajouter au carnet'));
+      await tester.pumpAndSettle();
+
+      // Aucune confirmation : rien n'est écrasé.
+      expect(clients.all, hasLength(avant + 1));
+      expect(draft.clientId, isNotNull);
     });
   });
 }
