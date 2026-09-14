@@ -80,11 +80,10 @@ android {
     }
 }
 
-kotlin {
-    compilerOptions {
-        jvmTarget = org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_17
-    }
-}
+// Pas de bloc `kotlin { }` : depuis le Kotlin intégré, Flutter n'applique
+// plus le plugin Gradle Kotlin, et ce bloc n'existe donc plus. La version de
+// la machine virtuelle visée par Kotlin suit celle de `compileOptions`
+// ci-dessus, sans avoir à la répéter.
 
 flutter {
     source = "../.."
