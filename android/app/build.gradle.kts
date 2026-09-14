@@ -80,10 +80,11 @@ android {
     }
 }
 
-// Pas de bloc `kotlin { }` : depuis le Kotlin intégré, Flutter n'applique
-// plus le plugin Gradle Kotlin, et ce bloc n'existe donc plus. La version de
-// la machine virtuelle visée par Kotlin suit celle de `compileOptions`
-// ci-dessus, sans avoir à la répéter.
+// Ni plugin Kotlin, ni bloc `kotlin { }` : le module de l'application ne
+// contient plus une ligne de Kotlin. Son unique classe, `MainActivity`, est
+// écrite en Java, que Gradle compile sans qu'on ait à déclarer quoi que ce
+// soit — voir le commentaire qui l'accompagne. Les greffons, eux, restent en
+// Kotlin : chacun est un module à part, qui applique le plugin lui-même.
 
 flutter {
     source = "../.."
